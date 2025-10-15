@@ -1,0 +1,1 @@
+Add template assets (PNG/JSON) here.
