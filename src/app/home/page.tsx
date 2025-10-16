@@ -10,10 +10,10 @@ import { useToggle } from "../../contexts/toggle";
 
 export default function Home() {
   const { data: session, status } = useSession();
+  const { isToggled, isLoaded } = useToggle();
   if (status === "loading") return <div>Loading...</div>;
   if (session === null) return redirect("/");
 
-  const { isToggled, isLoaded } = useToggle();
 
   // Don't render with theme styles until loaded
   if (!isLoaded) {

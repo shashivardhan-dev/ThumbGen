@@ -1,19 +1,29 @@
-
-# Base image: Node.js Debian slim to support sharp
-FROM node:20-slim
-
-# Install libvips for sharp
-RUN apt-get update && apt-get install -y     libvips     && rm -rf /var/lib/apt/lists/*
-
+# Stage 1: Builder
+FROM node:20-alpine AS builder
 WORKDIR /app
 
 COPY package*.json ./
-RUN npm install --legacy-peer-deps
+COPY prisma ./prisma/
+RUN npm ci
 
 COPY . .
-
 RUN npm run build
+
+FROM node:20-alpine AS runner
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm ci --omit=dev
+
+COPY --from=builder /app/.next ./.next
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/src ./src
+COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/next.config.js ./next.config.js
+COPY --from=builder /app/tsconfig.json ./tsconfig.json
+
+RUN npx prisma generate
 
 EXPOSE 3000
 
-CMD ["npm", "run", "start"]
+CMD ["sh", "-c", "npx prisma migrate deploy && node dist/server.js & node dist/workers/thumbnailWorker.js && wait"]

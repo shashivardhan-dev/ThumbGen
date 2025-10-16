@@ -85,9 +85,9 @@ export default function Upcoming() {
           <h2 className={titleClasses}>
             Upcoming Features
           </h2>
-          <p className={descriptionClasses}>
-            We're always working on new ways to make ThumbGen even better. Here's a sneak peek at what's coming soon!
-          </p>
+         <p className={descriptionClasses}>
+    We&apos;re always working on new ways to make ThumbGen even better. Here&apos;s a sneak peek at what&apos;s coming soon!
+</p>
         </div>
         <div className="mt-12 grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
           {upcomingFeatures.map((feature) => (

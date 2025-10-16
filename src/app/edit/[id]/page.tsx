@@ -163,7 +163,7 @@ export default function EditPage() {
         setCurrentVersionIndex(latestIndex);
       }
     }
-  }, [thumbnails?.versions?.length]);
+  }, [thumbnails?.versions]);
 
   const themeClasses = isToggled 
     ? 'bg-gray-900 text-white' 

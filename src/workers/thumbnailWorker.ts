@@ -1,27 +1,11 @@
-/**
- * Worker process for thumbnail generation.
- * Emits granular progress updates to the Next.js app by POSTing to /api/worker/progress
- */
 import { Worker } from "bullmq";
 import connection from "../lib/queue.js";
 import { getGeminiAI } from "../lib/geminiai.ts";
 import { uploadBuffer, getSignedUrl } from "../lib/s3.ts";
 import { prisma } from "../lib/prisma.js";
 import Redis from "ioredis";
-import path from "path";
 import fs from "fs";
-const imagePath = path.join(process.cwd(), "public", "after.png");
 
-async function imageToBase64Async(imagePath) {
-  const fs = await import("fs/promises");
-  try {
-    const imageBuffer = await fs.readFile(imagePath);
-    return imageBuffer.toString("base64");
-  } catch (error) {
-    console.error("Error reading image file:", error);
-    throw error;
-  }
-}
 
 const redis = new Redis({
   port: parseInt(process.env.REDIS_PORT || ""), // Redis port

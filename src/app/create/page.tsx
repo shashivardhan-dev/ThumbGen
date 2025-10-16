@@ -16,16 +16,26 @@ export default function CreatePage() {
   const { isToggled } = useToggle();
   const dispatch = useAppDispatch();
   const { selectedChannel } = useAppSelector((state) => state.channels);
-  
-  if (status === 'loading') return <div>Loading...</div>;
-  if (session === null) return redirect('/');
 
+  const [title, setTitle] = useState('');
+  const [thumbnailText, setThumbnailText] = useState('');
+  const [description, setDescription] = useState('');
+  const [selectedStyle, setSelectedStyle] = useState('bold');
+  const [uploadedImage, setUploadedImage] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [isDragOver, setIsDragOver] = useState(false);
+  const router = useRouter();
+  const [isGenerating, setIsGenerating] = useState(false);
+  
   // RTK Query hook to fetch channels
   const {
     data: dataChannels,
     isLoading: channelsLoading,
     error: channelsError,
   } = useGetChannelsQuery();
+
+   if (status === 'loading') return <div>Loading...</div>;
+  if (session === null) return redirect('/');
 
   const channels = dataChannels?.channels || [];
 
@@ -36,21 +46,6 @@ export default function CreatePage() {
     status: string;
     pct: number;
   }
-
-  const [title, setTitle] = useState('');
-  const [thumbnailText, setThumbnailText] = useState('');
-  const [description, setDescription] = useState('');
-  const [selectedStyle, setSelectedStyle] = useState('bold');
-  const [uploadedImage, setUploadedImage] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [isDragOver, setIsDragOver] = useState(false);
-  const router = useRouter();
-  const [progress, setProgress] = useState<Progress>({ meta: { preview: '' }, status: '', pct: 0 });
-  const [previewSrc, setPreviewSrc] = useState<string | null>(null);
-
-  const [error, setError] = useState(null);
-  const [prompt, setPrompt] = useState('');
-  const [isGenerating, setIsGenerating] = useState(false);
 
   const styles = [
     { 
@@ -228,7 +223,6 @@ export default function CreatePage() {
     } catch (error: any) {
       console.error('Generation failed:', error);
       setIsGenerating(false);
-      setError(error.message);
     }
   }
 
@@ -490,7 +484,7 @@ export default function CreatePage() {
                     <div className="flex items-start gap-3">
                       {selectedChannelData.logoUrl && (
                         <div className="flex-shrink-0">
-                          <img
+                          <Image
                             src={`https://thumbnailgenai.s3.ap-south-1.amazonaws.com/${selectedChannelData.logoUrl}`}
                             alt={`${selectedChannelData.name} logo`}
                             className="w-12 h-12 rounded-full object-cover"
