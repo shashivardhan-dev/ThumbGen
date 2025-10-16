@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useToggle } from "../../contexts/toggle";
+import Image from "next/image";
 import {
   Search,
   FilterIcon,
@@ -211,7 +212,7 @@ export default function MyDesignsPage() {
                   className="flex flex-col gap-4 group cursor-pointer"
                 >
                   <div className="relative w-full aspect-video rounded-2xl overflow-hidden shadow-lg transition-transform duration-300 group-hover:scale-105">
-                    <img
+                    <Image
                       src={`https://thumbnailgenai.s3.ap-south-1.amazonaws.com/${currentVersion.s3Key}`}
                       alt={thumbnail.title || "Untitled"}
                       className="w-full h-full object-contain"

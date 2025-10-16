@@ -18,7 +18,7 @@ export default function Testimonials() {
               <div className="w-24 h-24 rounded-full overflow-hidden mb-4">
                 <Image alt={t.name} src={t.img} width={96} height={96} />
               </div>
-              <p className="text-slate-600 italic">"{t.quote}"</p>
+              <p className="text-slate-600 italic">{t.quote}</p>
               <p className="mt-4 text-slate-900 font-semibold">{t.name}</p>
             </div>
           ))}

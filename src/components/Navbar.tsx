@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { signIn, signOut, useSession } from "next-auth/react";
 import { User, LogOut } from "lucide-react";
@@ -196,10 +197,12 @@ useEffect(() => {
                 aria-expanded={isDropdownOpen}
                 aria-haspopup="true"
               >
-                <img
+                <Image
                   src={getProfileImageUrl(session.user?.image)}
                   alt="Profile"
                   className="w-full h-full object-cover"
+                  width={40}
+                  height={40}
                   onError={(e) => {
                     console.error("Image failed to load:", session.user?.image);
                     const target = e.target as HTMLImageElement;
@@ -229,10 +232,12 @@ useEffect(() => {
                       <div className={`flex items-center justify-center w-8 h-8 rounded-full overflow-hidden ${
                         isToggled ? 'bg-gray-600' : 'bg-slate-600'
                       }`}>
-                        <img
+                        <Image
                           src={session.user?.image || "/default-avatar.png"}
                           alt="Profile"
                           className="w-full h-full object-cover"
+                          width={32}
+                          height={32}
                           onError={(e) => {
                             // Fallback to initials if image fails to load
                             const target = e.target as HTMLImageElement;

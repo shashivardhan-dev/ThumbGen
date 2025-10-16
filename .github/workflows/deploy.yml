@@ -1,0 +1,285 @@
+name: Deploy to EC2
+
+on:
+  push:
+    branches:
+      - release
+      - release/**
+  pull_request:
+    branches:
+      - release
+      - release/**
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  REGISTRY: docker.io
+  IMAGE_NAME: ${{ secrets.DOCKERHUB_USERNAME }}/nextjs-app
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run linter
+        run: npm run lint --if-present
+
+      - name: Run tests
+        run: npm test --if-present
+
+      - name: Run security audit
+        run: npm audit --audit-level=high
+
+  read-flags:
+    needs: test
+    runs-on: ubuntu-latest
+    outputs:
+      deploy_dev: ${{ steps.read.outputs.deploy_dev }}
+      deploy_prod: ${{ steps.read.outputs.deploy_prod }}
+    steps:
+      - uses: actions/checkout@v3
+      - id: read
+        run: |
+          DEV=$(grep '^deploy_dev=' deploy.flag | cut -d'=' -f2)
+          PROD=$(grep '^deploy_prod=' deploy.flag | cut -d'=' -f2)
+          echo "deploy_dev=$DEV" >> $GITHUB_OUTPUT
+          echo "deploy_prod=$PROD" >> $GITHUB_OUTPUT
+          echo "🧩 Parsed deploy.flag → DEV=$DEV | PROD=$PROD"
+
+  build_dev:
+    needs: read-flags
+    runs-on: ubuntu-latest
+    if: needs.read-flags.outputs.deploy_dev == 'true'
+    environment: dev
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v4
+        with:
+          images: ${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=raw,value=latest,enable=true
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+  build_prod:
+    needs: read-flags
+    runs-on: ubuntu-latest
+    if: needs.read-flags.outputs.deploy_prod == 'true'
+    environment: production
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v4
+        with:
+          images: ${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=raw,value=latest,enable=true
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+  deploy_dev:
+    needs: [read-flags, build_dev]
+    runs-on: ubuntu-latest
+    if: needs.read-flags.outputs.deploy_dev == 'true'
+    environment: dev
+    steps:
+      - uses: actions/checkout@v3
+      - name: Create .env for DEV
+        run: |
+          cat << EOF > .env
+          PORT=${{ secrets.PORT }}
+          DATABASE_URL=${{ secrets.DATABASE_URL }}
+          JWT_SECRET=${{ secrets.JWT_SECRET }}
+          DOCKERHUB_USERNAME=${{ secrets.DOCKERHUB_USERNAME }}
+          DOMAIN=${{ secrets.DOMAIN }}
+          EOF
+          echo "✅ Created .env file with secrets from dev environment"
+
+      - name: Copy .env to EC2 (DEV)
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          source: ".env"
+          target: "/home/${{ secrets.EC2_USERNAME }}/app/${{ github.event.repository.name }}/"
+          overwrite: true
+
+      - name: Deploy to DEV EC2
+        uses: appleboy/ssh-action@master
+        env:
+          BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          envs: BRANCH_NAME
+          script: |
+            cd /home/${{ secrets.EC2_USERNAME }}/app/${{ github.event.repository.name }}
+            git reset --hard origin/$BRANCH_NAME
+            echo ${{ secrets.DOCKERHUB_TOKEN }} | docker login -u ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin
+            docker pull ${{ env.IMAGE_NAME }}:latest || true
+            chmod +x /home/${{ secrets.EC2_USERNAME }}/app/${{ github.event.repository.name }}/deploy.sh
+            /home/${{ secrets.EC2_USERNAME }}/app/${{ github.event.repository.name }}/deploy.sh
+            docker image prune -af --filter "until=24h"
+
+      - name: Health Check (DEV)
+        run: |
+          sleep 12
+          response=$(curl -s -o /dev/null -w "%{http_code}" http://${{ secrets.EC2_HOST }}/health)
+          if [ "$response" = "200" ]; then
+            echo "✅ DEV Health check passed"
+          else
+            echo "❌ DEV Health check failed ($response)"
+            exit 1
+          fi
+
+  deploy_prod:
+    needs: [read-flags, build_prod]
+    runs-on: ubuntu-latest
+    if: needs.read-flags.outputs.deploy_prod == 'true'
+    environment: production
+    steps:
+      - uses: actions/checkout@v3
+      - name: Create .env for PROD
+        run: |
+          cat << EOF > .env
+          PORT=${{ secrets.PORT }}
+          DATABASE_URL=${{ secrets.DATABASE_URL }}
+          JWT_SECRET=${{ secrets.JWT_SECRET }}
+          DOCKERHUB_USERNAME=${{ secrets.DOCKERHUB_USERNAME }}
+          EOF
+          echo "✅ Created .env for PROD"
+
+      - name: Copy .env to EC2 (PROD)
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          source: ".env"
+          target: "/home/${{ secrets.EC2_USERNAME }}/app/${{ github.event.repository.name }}/"
+          overwrite: true
+
+      - name: Deploy to PROD EC2
+        uses: appleboy/ssh-action@master
+        env:
+          BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          envs: BRANCH_NAME
+          script: |
+            cd /home/${{ secrets.EC2_USERNAME }}/app/${{ github.event.repository.name }}
+            git fetch --all
+            git reset --hard origin/$BRANCH_NAME
+            echo ${{ secrets.DOCKERHUB_TOKEN }} | docker login -u ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin
+            docker pull ${{ env.IMAGE_NAME }}:latest || true
+            chmod +x /home/${{ secrets.EC2_USERNAME }}/app/${{ github.event.repository.name }}/deploy.sh
+            /home/${{ secrets.EC2_USERNAME }}/app/${{ github.event.repository.name }}/deploy.sh
+            docker image prune -af --filter "until=24h"
+
+      - name: Health Check (PROD)
+        run: |
+          sleep 12
+          response=$(curl -s -o /dev/null -w "%{http_code}" http://${{ secrets.EC2_HOST }}/health)
+          if [ "$response" = "200" ]; then
+            echo "✅ PROD Health check passed"
+          else
+            echo "❌ PROD Health check failed ($response)"
+            exit 1
+          fi
+
+  notify:
+    needs: [read-flags, deploy_dev, deploy_prod]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Smart Deployment Summary
+        run: |
+          echo "📣 Deployment Summary"
+          echo "--------------------------------"
+
+          DEV_FLAG="${{ needs.read-flags.outputs.deploy_dev }}"
+          PROD_FLAG="${{ needs.read-flags.outputs.deploy_prod }}"
+
+          # DEV
+          if [ "$DEV_FLAG" == "true" ]; then
+            if [ "${{ needs.deploy_dev.result }}" == "success" ]; then
+              echo "✅ DEV Deployment succeeded"
+            elif [ "${{ needs.deploy_dev.result }}" == "failure" ]; then
+              echo "❌ DEV Deployment failed"
+            else
+              echo "⚠️ DEV Deployment cancelled or unknown"
+            fi
+          else
+            echo "⏩ DEV Deployment skipped"
+          fi
+
+          # PROD
+          if [ "$PROD_FLAG" == "true" ]; then
+            if [ "${{ needs.deploy_prod.result }}" == "success" ]; then
+              echo "✅ PROD Deployment succeeded"
+            elif [ "${{ needs.deploy_prod.result }}" == "failure" ]; then
+              echo "❌ PROD Deployment failed"
+            else
+              echo "⚠️ PROD Deployment cancelled or unknown"
+            fi
+          else
+            echo "⏩ PROD Deployment skipped"
+          fi
+
+          echo "--------------------------------"
+          echo "🏁 Deployment summary completed"

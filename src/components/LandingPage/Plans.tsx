@@ -1,5 +1,4 @@
 import React from 'react'
-import Image from 'next/image'
 import { useToggle } from '../../contexts/toggle';
 
 function PlanCard({ title, price, features, popular = false }: any) {
@@ -141,7 +140,7 @@ export default function Plans() {
             Find the Perfect Plan
           </h2>
           <p className={descriptionClasses}>
-            Choose the plan that's right for you and start creating amazing thumbnails today.
+            Choose the plan that&apos;s right for you and start creating amazing thumbnails today.
           </p>
         </div>
         <div className="mt-16 grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">

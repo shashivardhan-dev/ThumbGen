@@ -4,13 +4,12 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "tsx watch src/server.ts",
+    "dev": "concurrently \"tsx watch src/server.ts\" \"tsx watch src/workers/thumbnailWorker.ts\"",
     "build": "next build",
-    "start": "next start -p 3000",
     "lint": "next lint",
-    "seed": "node prisma/seed.js",
-    "start:dev": "next dev -p 3000",
-    "worker": "tsx src/workers/thumbnailWorker.ts"
+    "lint:fix": "next lint --fix",
+    "start:dev": "next start"
+
   },
   "dependencies": {
     "@google/genai": "^1.24.0",
@@ -23,6 +22,7 @@
     "axios": "1.11.0",
     "bcryptjs": "3.0.2",
     "bullmq": "5.58.5",
+    "concurrently": "^9.2.1",
     "csv-stringify": "6.6.0",
     "ioredis": "5.7.0",
     "jsonwebtoken": "9.0.2",

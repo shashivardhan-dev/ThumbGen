@@ -1,8 +1,9 @@
 // Fixed Channels.tsx with working drag & drop functionality
 "use client";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useToggle } from "../../contexts/toggle";
 import Navbar from "../../components/Navbar";
+import Image from "next/image";
 import { useAppDispatch, useAppSelector } from "../../lib/store/hooks";
 import {
   useGetChannelsQuery,
@@ -60,7 +61,9 @@ export default function Channels() {
     refetch,
   } = useGetChannelsQuery();
 
-  const channels = dataChannels?.channels || [];
+  const channels = useMemo(() => {
+    return dataChannels?.channels || [];
+}, [dataChannels])
 
   const [createChannel, { isLoading: isCreating }] = useCreateChannelMutation();
   const [editChannel, { isLoading: isUpdating }] = useUpdateChannelMutation();
@@ -710,7 +713,7 @@ export default function Channels() {
                     >
                       {imagePreview ? (
                         <>
-                          <img
+                          <Image
                             alt="Brand Logo Preview"
                             className="h-full w-full object-contain rounded-lg"
                             src={imagePreview}
@@ -980,8 +983,7 @@ export default function Channels() {
                     disabled={isFormDisabled}
                   />
                   <p className={`mt-2 text-xs ${themeClasses.text.secondary}`}>
-                    Describe any other unique elements or rules for your brand's
-                    thumbnails.
+                    Describe any other unique elements or rules for your brand&apos;s thumbnails.
                   </p>
                 </div>
               </div>

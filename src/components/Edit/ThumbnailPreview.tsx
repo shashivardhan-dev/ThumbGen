@@ -1,6 +1,7 @@
 'use client';
 import { Edit, ArrowLeft, ArrowRight } from 'lucide-react';
 import { useToggle } from "../../contexts/toggle";
+import Image from 'next/image';
 
 interface ThumbnailVersion {
   id: string;
@@ -104,7 +105,7 @@ export default function ThumbnailPreview({
         <div className="relative group">
           <div className="w-11/12 aspect-video bg-gray-200 rounded-xl overflow-hidden shadow-2xl transition-all duration-300 group-hover:shadow-3xl mx-auto">
             {currentVersion?.s3Key ? (
-              <img 
+              <Image 
                 src={`https://thumbnailgenai.s3.ap-south-1.amazonaws.com/${currentVersion.s3Key}`}
                 alt={`${thumb.title} - Version ${currentVersionIndex + 1}`}
                 className="w-full h-full object-cover"
