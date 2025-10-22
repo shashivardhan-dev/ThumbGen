@@ -1,3 +1,4 @@
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "../../../../lib/prisma";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "../../../../lib/auth"
@@ -6,7 +7,7 @@ import { streamToBuffer } from "../../../../lib/utils/image";
 import { uploadBuffer } from "../../../../lib/s3";
 import { v4 as uuid } from "uuid";
 
-export async function POST(req: Request, res: Response) {
+export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     if (!session || !session.user)
@@ -79,16 +80,16 @@ export async function POST(req: Request, res: Response) {
           }
         );
       } catch (e) {
-        return new Response(JSON.stringify({ error: "Bad Request" }), {
+        return new NextResponse(JSON.stringify({ error: "Bad Request" }), {
           status: 400,
         });
       }
     } else {
-      return new Response(JSON.stringify({ error: "User not found" }), {
+      return new NextResponse(JSON.stringify({ error: "User not found" }), {
         status: 404,
       });
     }
   } catch (e) {
-    return new Response(JSON.stringify({ error: "unauth" }), { status: 401 });
+    return new NextResponse(JSON.stringify({ error: "unauth" }), { status: 401 });
   }
 }

@@ -1,13 +1,14 @@
 
 
 // app/api/channels/[id]/route.ts
+import { NextRequest } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../../../lib/auth"; 
 import {prisma} from "../../../../lib/prisma";
 import { uploadBuffer } from "../../../../lib/s3";
 import { streamToBuffer } from "../../../../lib/utils/image";
 
-export async function PUT(req: Request,    { params }: { params: { id: string } }  ) {
+export async function PUT(req: NextRequest,    { params }: { params: Promise<{ id: string }> }  ) {
   try {
     const session = await getServerSession(authOptions);
     if (!session || !session.user)
@@ -22,7 +23,7 @@ export async function PUT(req: Request,    { params }: { params: { id: string } 
         status: 404,
       });
     }
-   const { id  } = params;
+   const { id  } = await params;
     const channelId =  id;
     const formData = await req.formData();
 
@@ -70,7 +71,7 @@ export async function PUT(req: Request,    { params }: { params: { id: string } 
 
 
 
-export async function DELETE(req: Request, { params }: { params: { id: string } }) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getServerSession(authOptions);
     if (!session || !session.user) {
@@ -85,10 +86,10 @@ export async function DELETE(req: Request, { params }: { params: { id: string } 
     if (!user) {
       return new Response(JSON.stringify({ error: "User not found" }), { status: 404 });
     }
-
+const { id } = await params;
     // ensure the channel belongs to the user
     const channel = await prisma.channel.findUnique({
-      where: { id: params.id },
+      where: { id: id },
     });
 
     if (!channel || channel.userId !== user.id) {
@@ -98,10 +99,10 @@ export async function DELETE(req: Request, { params }: { params: { id: string } 
     }
 
     await prisma.channel.delete({
-      where: { id: params.id },
+      where: { id: id },
     });
 
-    return new Response(JSON.stringify({ success: true, id: params.id }), { status: 200 });
+    return new Response(JSON.stringify({ success: true, id: id }), { status: 200 });
   } catch (err) {
     console.error("Delete channel error:", err);
     return new Response(JSON.stringify({ error: "Server error" }), { status: 500 });

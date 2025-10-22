@@ -1,3 +1,4 @@
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "../../../lib/prisma";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "../../../lib/auth";
@@ -6,11 +7,11 @@ import { v4 as uuid } from "uuid";
 import { streamToBuffer } from "../../../lib/utils/image";
 import AWS from "aws-sdk";
 
-export async function GET(req: Request, res: Response) {
+export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     if (!session || !session.user)
-      return new Response(JSON.stringify({ error: "unauth" }), { status: 401 });
+      return new NextResponse(JSON.stringify({ error: "unauth" }), { status: 401 });
 
     const user = await prisma.user.findUnique({
       where: { email: session.user.email as string },
@@ -37,7 +38,7 @@ export async function GET(req: Request, res: Response) {
           },
         });
         console.log(result, "result");
-        return new Response(
+        return new NextResponse(
           JSON.stringify({
             channels: result,
           }),
@@ -46,32 +47,32 @@ export async function GET(req: Request, res: Response) {
           }
         );
       } catch (e) {
-        return new Response(JSON.stringify({ error: "Bad Request" }), {
+        return new NextResponse(JSON.stringify({ error: "Bad Request" }), {
           status: 400,
         });
       }
     } else {
-      return new Response(JSON.stringify({ error: "User not found" }), {
+      return new NextResponse(JSON.stringify({ error: "User not found" }), {
         status: 404,
       });
     }
   } catch (e) {
-    return new Response(JSON.stringify({ error: "unauth" }), { status: 401 });
+    return new NextResponse(JSON.stringify({ error: "unauth" }), { status: 401 });
   }
 }
 
-export async function POST(req: Request, res: Response) {
+export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     if (!session || !session.user)
-      return new Response(JSON.stringify({ error: "unauth" }), { status: 401 });
+      return new NextResponse(JSON.stringify({ error: "unauth" }), { status: 401 });
 
     const user = await prisma.user.findUnique({
       where: { email: session.user.email as string },
     });
 
     if (!user) {
-      return new Response(JSON.stringify({ error: "User not found" }), {
+      return new NextResponse(JSON.stringify({ error: "User not found" }), {
         status: 404,
       });
     }
@@ -112,8 +113,8 @@ export async function POST(req: Request, res: Response) {
       },
     });
 
-    return new Response(JSON.stringify(channel), { status: 200 });
+    return new NextResponse(JSON.stringify(channel), { status: 200 });
   } catch (err) {
-    return new Response(JSON.stringify({ error: "unauth" }), { status: 401 });
+    return new NextResponse(JSON.stringify({ error: "unauth" }), { status: 401 });
   }
 }
