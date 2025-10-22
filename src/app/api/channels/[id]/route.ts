@@ -7,7 +7,7 @@ import {prisma} from "../../../../lib/prisma";
 import { uploadBuffer } from "../../../../lib/s3";
 import { streamToBuffer } from "../../../../lib/utils/image";
 
-export async function PUT(req: Request,   context: { params: { id: string } }  ) {
+export async function PUT(req: Request,    { params }: { params: { id: string } }  ) {
   try {
     const session = await getServerSession(authOptions);
     if (!session || !session.user)
@@ -22,8 +22,8 @@ export async function PUT(req: Request,   context: { params: { id: string } }  )
         status: 404,
       });
     }
-   const { params } = context;
-    const channelId =  (await params).id;
+   const { id  } = params;
+    const channelId =  id;
     const formData = await req.formData();
 
     const name = formData.get("channelName") as string | null;
