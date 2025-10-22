@@ -1,9 +1,23 @@
-import NextAuth, {SessionStrategy} from "next-auth"
+import NextAuth, { SessionStrategy } from "next-auth"
 import GoogleProvider from "next-auth/providers/google"
 import { prisma } from "../../../../lib/prisma"
 import { PrismaAdapter } from "@next-auth/prisma-adapter"
+import type { AuthOptions, User } from "next-auth"
+import type { JWT } from "next-auth/jwt"
+import type { Account } from "@prisma/client"
 
-async function refreshAccessToken(account) {
+// Extend the JWT type to include custom properties
+declare module "next-auth/jwt" {
+  interface JWT {
+    accessToken?: string
+    refreshToken?: string
+    accessTokenExpires?: number
+    accountId?: string
+    user?: User
+  }
+}
+
+async function refreshAccessToken(account: Account) {
   try {
     const url =
       "https://oauth2.googleapis.com/token?" +
@@ -11,7 +25,7 @@ async function refreshAccessToken(account) {
         client_id: process.env.GOOGLE_CLIENT_ID || "",
         client_secret: process.env.GOOGLE_CLIENT_SECRET || "",
         grant_type: "refresh_token",
-        refresh_token: account.refresh_token || null,
+        refresh_token: account.refresh_token || "",
       })
 
     const response = await fetch(url, { method: "POST" })
@@ -36,7 +50,7 @@ async function refreshAccessToken(account) {
   }
 }
 
-export const authOptions = {
+export const authOptions: AuthOptions = {
   adapter: PrismaAdapter(prisma),
   providers: [
     GoogleProvider({
@@ -46,7 +60,7 @@ export const authOptions = {
     }),
   ],
   secret: process.env.NEXTAUTH_SECRET,
-  session: { strategy: "jwt" as SessionStrategy},
+  session: { strategy: "jwt" as SessionStrategy },
 
   callbacks: {
     async jwt({ token, user, account }) {
@@ -56,16 +70,16 @@ export const authOptions = {
           where: { provider: account.provider, providerAccountId: account.providerAccountId },
         })
 
-        token.accessToken = dbAccount?.access_token
-        token.refreshToken = dbAccount?.refresh_token
-        token.accessTokenExpires = dbAccount?.expires_at
+        token.accessToken = dbAccount?.access_token || undefined
+        token.refreshToken = dbAccount?.refresh_token || undefined
+        token.accessTokenExpires = dbAccount?.expires_at || undefined
         token.accountId = dbAccount?.id
         token.user = user
         return token
       }
 
       // Check expiry
-      if (Date.now() < (token.accessTokenExpires as number) * 1000) {
+      if (token.accessTokenExpires && Date.now() < token.accessTokenExpires * 1000) {
         return token
       }
 
@@ -76,7 +90,7 @@ export const authOptions = {
           const refreshed = await refreshAccessToken(account)
           if (refreshed) {
             token.accessToken = refreshed.access_token
-            token.accessTokenExpires = Date.now() + refreshed.expires_in * 1000
+            token.accessTokenExpires = Math.floor(Date.now() / 1000 + refreshed.expires_in)
             token.refreshToken = refreshed.refresh_token ?? token.refreshToken
           }
         }
@@ -86,9 +100,9 @@ export const authOptions = {
     },
 
     async session({ session, token }) {
-      session.user = token.user as any
-      session.accessToken = token.accessToken
-      session.error = token.error
+      if (token.user) {
+        session.user = token.user
+      }
       return session
     },
   },
