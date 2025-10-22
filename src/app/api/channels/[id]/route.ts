@@ -2,7 +2,7 @@
 
 // app/api/channels/[id]/route.ts
 import { getServerSession } from "next-auth";
-import { authOptions } from "../../auth/[...nextauth]/route"; 
+import { authOptions } from "../../../../lib/auth"; 
 import {prisma} from "../../../../lib/prisma";
 import { uploadBuffer } from "../../../../lib/s3";
 import { streamToBuffer } from "../../../../lib/utils/image";
@@ -10,11 +10,11 @@ import { streamToBuffer } from "../../../../lib/utils/image";
 export async function PUT(req: Request,   context: { params: { id: string } }  ) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session)
+    if (!session || !session.user)
       return new Response(JSON.stringify({ error: "unauth" }), { status: 401 });
 
     const user = await prisma.user.findUnique({
-      where: { email: session.user.email },
+      where: { email: session.user.email as string },
     });
 
     if (!user) {
@@ -73,13 +73,13 @@ export async function PUT(req: Request,   context: { params: { id: string } }  )
 export async function DELETE(req: Request, { params }: { params: { id: string } }) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session) {
+    if (!session || !session.user) {
       return new Response(JSON.stringify({ error: "unauth" }), { status: 401 });
     }
 
     // find user
     const user = await prisma.user.findUnique({
-      where: { email: session.user.email },
+      where: { email: session.user.email as string },
     });
 
     if (!user) {

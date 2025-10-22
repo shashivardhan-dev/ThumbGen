@@ -1,6 +1,6 @@
 import { prisma } from "../../../lib/prisma";
 import { getServerSession } from "next-auth/next";
-import { authOptions } from "../auth/[...nextauth]/route";
+import { authOptions } from "../../../lib/auth";
 import { uploadBuffer } from "../../../lib/s3";
 import { v4 as uuid } from "uuid";
 import { streamToBuffer } from "../../../lib/utils/image";
@@ -9,11 +9,11 @@ import AWS from "aws-sdk";
 export async function GET(req: Request, res: Response) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session)
+    if (!session || !session.user)
       return new Response(JSON.stringify({ error: "unauth" }), { status: 401 });
 
     const user = await prisma.user.findUnique({
-      where: { email: session.user.email },
+      where: { email: session.user.email as string },
     });
 
     if (user) {
@@ -63,11 +63,11 @@ export async function GET(req: Request, res: Response) {
 export async function POST(req: Request, res: Response) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session)
+    if (!session || !session.user)
       return new Response(JSON.stringify({ error: "unauth" }), { status: 401 });
 
     const user = await prisma.user.findUnique({
-      where: { email: session.user.email },
+      where: { email: session.user.email as string },
     });
 
     if (!user) {

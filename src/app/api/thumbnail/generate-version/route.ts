@@ -1,6 +1,6 @@
 import { prisma } from "../../../../lib/prisma";
 import { getServerSession } from "next-auth/next";
-import { authOptions } from "../../auth/[...nextauth]/route";
+import { authOptions } from "../../../../lib/auth";
 import { thumbnailQueue } from "../../../../lib/queue";
 import { streamToBuffer } from "../../../../lib/utils/image";
 import { uploadBuffer } from "../../../../lib/s3";
@@ -9,7 +9,7 @@ import { v4 as uuid } from "uuid";
 export async function POST(req: Request, res: Response) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session)
+    if (!session || !session.user)
       return new Response(JSON.stringify({ error: "unauth" }), { status: 401 });
 
     const data = await req.json();
@@ -25,7 +25,9 @@ export async function POST(req: Request, res: Response) {
         status: 404,
       });
 
-    if (thumbnail.userId !== session.user.id)
+      const userId = (session.user as { id: string }).id;
+
+    if (thumbnail.userId !== userId)
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
       });
