@@ -262,8 +262,8 @@ jobs:
           envs: BRANCH_NAME
           script: |
             cd /home/${{ secrets.EC2_USERNAME }}/app/${{ github.event.repository.name }}
-            git fetch --all
-            git reset --hard origin/$BRANCH_NAME
+            # git fetch --all
+            # git reset --hard origin/$BRANCH_NAME
             echo ${{ secrets.DOCKERHUB_TOKEN }} | docker login -u ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin
             docker pull ${{ env.IMAGE_NAME }}:latest || true
             chmod +x /home/${{ secrets.EC2_USERNAME }}/app/${{ github.event.repository.name }}/deploy.sh
