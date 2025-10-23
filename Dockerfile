@@ -6,7 +6,7 @@ WORKDIR /app
 COPY package*.json ./
 
 # Install all deps (cached unless package.json changes)
-RUN npm ci
+RUN npm ci || cat /root/.npm/_logs/*.log
 
 # Copy the rest of your source
 COPY . .
