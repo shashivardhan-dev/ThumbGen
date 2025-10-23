@@ -247,8 +247,9 @@ jobs:
          host: ${{ secrets.EC2_HOST }}
          username: ${{ secrets.EC2_USERNAME }}
          key: ${{ secrets.EC2_SSH_KEY }}
-         source: "deploy.sh"
+         source: "deploy.sh,docker-compose.yml"
          target: "/home/${{ secrets.EC2_USERNAME }}/app/${{ github.event.repository.name }}/"
+         overwrite: true
 
       - name: Deploy to PROD EC2
         uses: appleboy/ssh-action@master
