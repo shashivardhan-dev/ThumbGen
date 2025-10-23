@@ -8,8 +8,9 @@
     "build": "next build",
     "lint": "next lint",
     "lint:fix": "next lint --fix",
-    "start:dev": "next start"
-
+    "start:dev": "next start",
+   "build:server": "tsc -p tsconfig.server.json",
+    "build:workers": "tsc -p tsconfig.workers.json"
   },
   "dependencies": {
     "@google/genai": "^1.24.0",
