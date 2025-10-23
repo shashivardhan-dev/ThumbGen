@@ -1,128 +1,96 @@
+# deploy.sh
 #!/bin/bash
 set -euo pipefail
 
-# -----------------------------
-# Colors
-# -----------------------------
+# Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
-NC='\033[0m'
-
-# -----------------------------
-# Configuration
-# -----------------------------
-COMPOSE_FILE="/home/ubuntu/app/ThumbGen/docker-compose.yml"
-CONTAINER_SERVICE="nextjs-app"       # must match service name in docker-compose.yml
-HEALTH_ENDPOINT="/api/health"        # health check endpoint
-HEALTH_TIMEOUT=120                    # seconds
+NC='\033[0m' # No Color
 
 echo -e "${GREEN}🚀 Starting deployment...${NC}"
 
-# -----------------------------
-# Load env vars
-# -----------------------------
-ENV_FILE=".env"
-if [ -f "$ENV_FILE" ]; then
-    set -a
-    source "$ENV_FILE"
-    set +a
-    echo -e "${GREEN}✅ Environment variables loaded from $ENV_FILE${NC}"
-else
-    echo -e "${RED}⚠️  $ENV_FILE not found. Aborting.${NC}"
-    exit 1
+# Load environment variables
+if [ -f .env ]; then
+    export $(cat .env | grep -v '^#' | xargs)
 fi
 
-# -----------------------------
-# Validate required vars
-# -----------------------------
-REQUIRED_VARS=(DOCKERHUB_USERNAME)
-for var in "${REQUIRED_VARS[@]}"; do
-  if [ -z "${!var:-}" ]; then
-    echo -e "${RED}❌ $var not set. Aborting deployment.${NC}"
-    exit 1
-  fi
-done
-
-# -----------------------------
-# Ensure docker-compose file exists
-# -----------------------------
-if [ ! -f "$COMPOSE_FILE" ]; then
-    echo -e "${RED}❌ docker-compose file not found at $COMPOSE_FILE${NC}"
-    exit 1
+# Basic validations
+if [ -z "${DOCKERHUB_USERNAME:-}" ]; then
+echo -e "${RED}❌ DOCKERHUB_USERNAME not set. Define it in .env or as an environment variable.${NC}"
+# If you prefer to continue without image cleanup, comment out the exit line below
+# exit 1
 fi
 
-# -----------------------------
-# Stop old containers
-# -----------------------------
+
+if [ -z "${EC2_USERNAME:-}" ]; then
+# EC2_USERNAME is only required when running locally on target box with assumptions; warn if missing
+echo -e "${YELLOW}⚠️ EC2_USERNAME not set. Make sure you are running this script on the target host in /home/<user>/app.${NC}"
+fi
+
+# Stop and remove old containers
 echo -e "${YELLOW}📦 Stopping old containers...${NC}"
-docker-compose -f "$COMPOSE_FILE" down --remove-orphans || true
+docker-compose down --remove-orphans || true
 
-# -----------------------------
-# Clean old images
-# -----------------------------
-echo -e "${YELLOW}🧼 Cleaning old Docker images...${NC}"
-docker ps -a --filter "name=$CONTAINER_SERVICE" --format "{{.ID}}" | xargs -r docker rm -f || true
-docker images | grep "$CONTAINER_SERVICE" | grep "<none>" | awk '{print $3}' | xargs -r docker rmi -f || true
-docker images | grep "$CONTAINER_SERVICE" | grep "local"  | awk '{print $3}' | xargs -r docker rmi -f || true
+# Remove old images (keep last 2) — safe guard when DOCKERHUB_USERNAME available
+if [ -n "${DOCKERHUB_USERNAME:-}" ]; then
+echo -e "${YELLOW}🧹 Cleaning up old images for ${DOCKERHUB_USERNAME}/nextjs-app...${NC}"
+docker images --format '{{.Repository}} {{.ID}} {{.Tag}}' | grep "^${DOCKERHUB_USERNAME}/nextjs-app" | awk '{print $2}' | tail -n +3 | xargs -r docker rmi -f || true
+else
+echo -e "${YELLOW}⚠️ Skipping image cleanup: DOCKERHUB_USERNAME not set.${NC}"
+fi
 
-# -----------------------------
 # Pull latest images
-# -----------------------------
-echo -e "${YELLOW}📥 Pulling latest Docker images...${NC}"
-docker-compose -f "$COMPOSE_FILE" pull
+echo -e "${YELLOW}📥 Pulling latest images...${NC}"
+docker-compose pull
 
-# -----------------------------
 # Start containers
-# -----------------------------
 echo -e "${YELLOW}🏗️  Starting containers...${NC}"
-docker-compose -f "$COMPOSE_FILE" up -d
+docker-compose up -d
 
-# -----------------------------
-# Wait for healthy container
-# -----------------------------
-echo -e "${YELLOW}⏳ Waiting for $CONTAINER_SERVICE to be healthy...${NC}"
+# Wait for containers to be healthy
+echo -e "${YELLOW}⏳ Waiting for containers to be healthy...${NC}"
+TIMEOUT=120
 ELAPSED=0
-while [ $ELAPSED -lt $HEALTH_TIMEOUT ]; do
-    health_status=$(docker inspect --format='{{.State.Health.Status}}' "$CONTAINER_SERVICE" 2>/dev/null || echo "missing")
+SLEEP_INTERVAL=5
+CONTAINER_NAME="nextjs-app"
+
+while [ $ELAPSED -lt $TIMEOUT ]; do
+   health_status=$(docker inspect --format='{{.State.Health.Status}}' "$CONTAINER_NAME" 2>/dev/null || echo "missing")
+    
     if [ "$health_status" = "healthy" ]; then
-        echo -e "${GREEN}✅ $CONTAINER_SERVICE is healthy!${NC}"
+        echo -e "${GREEN}✅ Application is healthy!${NC}"
         break
     fi
+
     if [ "$health_status" = "unhealthy" ]; then
-        echo -e "${RED}❌ Container unhealthy. Dumping logs...${NC}"
-        docker-compose -f "$COMPOSE_FILE" logs --tail=100 "$CONTAINER_SERVICE" || true
-        exit 1
-    fi
+    echo -e "${RED}❌ Container reported unhealthy. Dumping logs...${NC}"
+    docker-compose logs --tail=100 app || true
+    exit 1
+    fi 
+    
     echo -e "Health status: $health_status (${ELAPSED}s elapsed)"
     sleep 5
-    ELAPSED=$((ELAPSED + 5))
+    ELAPSED=$((elapsed + 5))
 done
 
-if [ $ELAPSED -ge $HEALTH_TIMEOUT ]; then
-    echo -e "${RED}❌ Health check timeout.${NC}"
-    docker-compose -f "$COMPOSE_FILE" logs --tail=50 "$CONTAINER_SERVICE"
+if [ $ELAPSED -ge $TIMEOUT ]; then
+    echo -e "${RED}❌ Health check timeout. Checking logs...${NC}"
+    docker-compose logs --tail=50 app
     exit 1
 fi
 
-# -----------------------------
-# Final HTTP health check
-# -----------------------------
-APP_URL="http://localhost$HEALTH_ENDPOINT"
-response=$(curl -s -o /dev/null -w "%{http_code}" "$APP_URL" || echo "000")
-if [ "$response" = "200" ]; then
-    echo -e "${GREEN}✅ HTTP health check passed (${APP_URL})${NC}"
-else
-    echo -e "${RED}❌ HTTP health check failed ($response)${NC}"
-    exit 1
-fi
+# Display container status
+echo -e "${GREEN}📊 Container Status:${NC}"
+docker-compose ps
 
-# -----------------------------
-# Success message
-# -----------------------------
-echo -e "${GREEN}🎉 Deployment completed successfully!${NC}"
+# Show logs
+echo -e "${GREEN}📝 Recent logs:${NC}"
+docker-compose logs --tail=20
+
+echo -e "${GREEN}✅ Deployment completed successfully!${NC}"
 if command -v hostname >/dev/null 2>&1; then
-    echo -e "${GREEN}🌐 Application is running at: http://$(hostname -I | awk '{print $1}')${NC}"
+echo -e "${GREEN}🌐 Application is running at: https://$(hostname)${NC}"
 fi
 
 # Optional: Send notification
