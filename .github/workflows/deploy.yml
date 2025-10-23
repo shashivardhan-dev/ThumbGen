@@ -247,7 +247,7 @@ jobs:
          host: ${{ secrets.EC2_HOST }}
          username: ${{ secrets.EC2_USERNAME }}
          key: ${{ secrets.EC2_SSH_KEY }}
-         source: "deploy.sh,docker-compose.yml"
+         source: "deploy.sh,docker-compose.yml,nginx/"
          target: "/home/${{ secrets.EC2_USERNAME }}/app/${{ github.event.repository.name }}/"
          overwrite: true
 
