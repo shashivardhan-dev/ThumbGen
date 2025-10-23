@@ -210,7 +210,9 @@ app.prepare().then(async () => {
 
   const PORT = process.env.PORT || 3000;
 
-  httpServer.listen(PORT, () => {
+  const host = parseInt("0.0.0.0", 10);
+
+  httpServer.listen(PORT, host, () => {
     console.log(`🚀 Next.js + Socket.IO running on http://localhost:${PORT}`);
   });
 });
