@@ -12,7 +12,7 @@ NC='\033[0m'
 # -----------------------------
 # Configuration
 # -----------------------------
-COMPOSE_FILE="./docker-compose.yml"  # adjust if your file is elsewhere
+COMPOSE_FILE="/home/ubuntu/app/ThumbGen/docker-compose.yml"
 CONTAINER_SERVICE="nextjs-app"       # must match service name in docker-compose.yml
 HEALTH_ENDPOINT="/api/health"        # health check endpoint
 HEALTH_TIMEOUT=120                    # seconds
