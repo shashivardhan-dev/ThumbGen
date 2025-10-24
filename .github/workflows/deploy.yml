@@ -241,6 +241,16 @@ jobs:
           target: "/home/${{ secrets.EC2_USERNAME }}/app/${{ github.event.repository.name }}/"
           overwrite: true
 
+      - name: Copy nginx config to EC2 (DEV)
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          source: "nginx/"
+          target: "/home/${{ secrets.EC2_USERNAME }}/app/${{ github.event.repository.name }}/"
+          overwrite: true
+
       - name: Copy deploy.sh to EC2
         uses: appleboy/scp-action@master
         with:
