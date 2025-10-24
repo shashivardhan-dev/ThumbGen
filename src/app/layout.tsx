@@ -2,7 +2,7 @@
 import './globals.css'
 import { Providers } from "./providers"
 import { getServerSession } from "next-auth/next"
-import { authOptions } from "./api/auth/[...nextauth]/route"
+import { authOptions } from "../lib/auth"
 import { ReactNode } from "react"
 import { SocketProvider } from '../components/sockets/SocketProvider';
 import StoreProvider from './storeProvider'

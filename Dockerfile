@@ -1,29 +1,45 @@
-# Stage 1: Builder
-FROM node:20-alpine AS builder
+# ---------- STAGE 1: BUILDER ----------
+FROM node:20-bullseye AS builder
 WORKDIR /app
 
+# Copy package files first for caching
 COPY package*.json ./
-COPY prisma ./prisma/
-RUN npm ci
 
+# Install all deps (cached unless package.json changes)
+RUN npm ci || cat /root/.npm/_logs/*.log
+
+# Copy the rest of your source
 COPY . .
-RUN npm run build
 
-FROM node:20-alpine AS runner
-WORKDIR /app
-
-COPY package*.json ./
-RUN npm ci --omit=dev
-
-COPY --from=builder /app/.next ./.next
-COPY --from=builder /app/public ./public
-COPY --from=builder /app/src ./src
-COPY --from=builder /app/prisma ./prisma
-COPY --from=builder /app/next.config.js ./next.config.js
-COPY --from=builder /app/tsconfig.json ./tsconfig.json
-
+# Generate Prisma Client
 RUN npx prisma generate
 
+# Build your TypeScript/Next.js app
+RUN npm run build
+
+RUN npm run build:server
+
+RUN npm run build:workers
+
+
+# ---------- STAGE 2: RUNNER ----------
+FROM node:20-bullseye-slim AS runner
+WORKDIR /app
+ENV NODE_ENV=production
+
+# Copy only what's needed
+COPY --from=builder /app/package*.json ./
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/next.config.* ./
+COPY --from=builder /app/tsconfig.json ./
+COPY --from=builder /app/build ./build 
+COPY --from=builder /app/.next ./.next
+# Make sure Prisma client is ready
+RUN npx prisma generate
+
+# Expose app port
 EXPOSE 3000
 
-CMD ["sh", "-c", "npx prisma migrate deploy && node dist/server.js & node dist/workers/thumbnailWorker.js && wait"]
+CMD ["sh", "-c", "npx prisma migrate deploy && node build/workers/thumbnailWorker.js & node build/server.js"]

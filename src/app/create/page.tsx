@@ -386,6 +386,8 @@ export default function CreatePage() {
                           <Image 
                             src={imagePreview} 
                             alt="Uploaded image preview" 
+                            // width={100}
+                            // height={100}
                             fill
                             className="object-contain"
                           />
@@ -487,6 +489,8 @@ export default function CreatePage() {
                           <Image
                             src={`https://thumbnailgenai.s3.ap-south-1.amazonaws.com/${selectedChannelData.logoUrl}`}
                             alt={`${selectedChannelData.name} logo`}
+                            width={48}
+                            height={48}
                             className="w-12 h-12 rounded-full object-cover"
                           />
                         </div>

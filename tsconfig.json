@@ -29,9 +29,14 @@
     "next-env.d.ts",
     ".next/types/**/*.ts",
     "**/*.ts",
-    "**/*.tsx"
-, "src/workers/editProcessor.ts", "src/workers/generationProcessor.ts", "src/workers/workerCluster.ts", "next.config.ts"  ],
+    "**/*.tsx",
+    "src/server.ts"
+, "src/workers/**/*.ts"  ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    ".next",
+    ".next/**",
+    "build",
+    "build/**"
   ]
 }

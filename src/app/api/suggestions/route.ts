@@ -1,15 +1,11 @@
+import { NextRequest,NextResponse } from "next/server";
 import { createSuggestionsAIClient } from "../../../lib/openAI/suggestions";
 import { ChatCompletionMessageParam } from "openai/resources/chat/completions";
 
-export async function POST(req: Request) {
-  // In a real app, you’d get these from req.body or DB
+export async function POST(req: NextRequest) {
+
 
   const chat = await req.json();
-
-  console.log("chat", chat);
-
-  const videoTitle = "Top 10 Travel Destinations";
-  const videoStyle = "Modern, minimal, bold text";
 
   // Chat history with 3 turns
   const chatHistory: ChatCompletionMessageParam[] = [
@@ -61,7 +57,7 @@ export async function POST(req: Request) {
 
     console.log(parsed);
 
-    return new Response(
+    return new NextResponse(
       JSON.stringify({
         message: parsed.message,
         suggestions: parsed.suggestions,
@@ -70,7 +66,7 @@ export async function POST(req: Request) {
     );
   } catch (error) {
     console.error("Failed to generate suggestions:", error);
-    return new Response(
+    return new NextResponse(
       JSON.stringify({ error: "Failed to generate suggestions" }),
       { status: 500 }
     );

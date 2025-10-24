@@ -1,0 +1,14 @@
+{
+  "extends": "./tsconfig.server.json",
+  "include": ["src/workers/**/*.ts"],
+  "compilerOptions": {
+    "outDir": "build/workers",
+    "skipLibCheck": true,
+    "noImplicitAny": false,
+    "strictNullChecks": false,
+    "esModuleInterop": true,
+    "moduleResolution": "node",
+    "module": "esnext",
+    "target": "ES2020"
+  }
+}

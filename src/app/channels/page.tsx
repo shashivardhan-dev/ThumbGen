@@ -716,6 +716,8 @@ export default function Channels() {
                           <Image
                             alt="Brand Logo Preview"
                             className="h-full w-full object-contain rounded-lg"
+                            height={100}
+                            width={100}
                             src={imagePreview}
                           />
                           {!isFormDisabled && (

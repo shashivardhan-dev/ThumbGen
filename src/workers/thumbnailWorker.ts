@@ -1,8 +1,8 @@
 import { Worker } from "bullmq";
-import connection from "../lib/queue.js";
-import { getGeminiAI } from "../lib/geminiai.ts";
-import { uploadBuffer, getSignedUrl } from "../lib/s3.ts";
-import { prisma } from "../lib/prisma.js";
+import connection from "../lib/queue";
+import { getGeminiAI } from "../lib/geminiai";
+import { uploadBuffer, getSignedUrl } from "../lib/s3";
+import { prisma } from "../lib/prisma";
 import Redis from "ioredis";
 import fs from "fs";
 

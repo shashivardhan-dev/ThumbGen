@@ -214,6 +214,8 @@ export default function MyDesignsPage() {
                   <div className="relative w-full aspect-video rounded-2xl overflow-hidden shadow-lg transition-transform duration-300 group-hover:scale-105">
                     <Image
                       src={`https://thumbnailgenai.s3.ap-south-1.amazonaws.com/${currentVersion.s3Key}`}
+                      width={300}
+                      height={300}
                       alt={thumbnail.title || "Untitled"}
                       className="w-full h-full object-contain"
                          onLoad={() => console.log('✅ Image loaded:', currentVersion.s3Key)}
