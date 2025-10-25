@@ -41,17 +41,20 @@ export default function AccountSettingsPage() {
   }, [user]);
   console.log(user, "user");
 
-
-  if (!user) return <div>Loading...</div>;
-
-   const updatePassword = useReverification(
+    const updatePassword = useReverification(
     async (currentPassword, newPassword) => {
+      if (!user) return;
       await user.updatePassword({
         currentPassword: currentPassword,
         newPassword: newPassword,
       });
     }
   );
+
+
+  if (!user) return <div>Loading...</div>;
+
+ 
 
   // Validation function
   const validate = () => {
