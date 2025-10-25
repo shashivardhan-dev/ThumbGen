@@ -7,7 +7,7 @@ import { createAdapter } from "@socket.io/redis-adapter";
 import Redis from "ioredis";
 
 const app = next({
-  dev: true,
+  dev:false,
 });
 const handle = app.getRequestHandler();
 
