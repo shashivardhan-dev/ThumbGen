@@ -41,7 +41,10 @@ export default function AccountSettingsPage() {
   }, [user]);
   console.log(user, "user");
 
-  const updatePassword = useReverification(
+
+  if (!user) return <div>Loading...</div>;
+
+   const updatePassword = useReverification(
     async (currentPassword, newPassword) => {
       await user.updatePassword({
         currentPassword: currentPassword,
@@ -49,8 +52,6 @@ export default function AccountSettingsPage() {
       });
     }
   );
-
-  if (!user) return <div>Loading...</div>;
 
   // Validation function
   const validate = () => {
@@ -93,7 +94,7 @@ export default function AccountSettingsPage() {
       toast.error(err.message);
       return;
     }
-    alert("Settings saved successfully!");
+   toast.success("Profile updated successfully!");
     setIsEditing(false);
   };
 
