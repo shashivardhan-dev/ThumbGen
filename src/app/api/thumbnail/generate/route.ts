@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "../../../../lib/prisma";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "../../../../lib/auth"
+import { auth } from "@clerk/nextjs/server";
 import { thumbnailQueue } from "../../../../lib/queue";
 import { streamToBuffer } from "../../../../lib/utils/image";
 import { uploadBuffer } from "../../../../lib/s3";
@@ -9,9 +8,11 @@ import { v4 as uuid } from "uuid";
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user)
+    const { isAuthenticated, userId } = await auth();
+
+    if (!isAuthenticated)
       return new Response(JSON.stringify({ error: "unauth" }), { status: 401 });
+
     const formData = await req.formData();
     const title = formData.get("title") as string;
     const description = formData.get("description") as string;
@@ -36,60 +37,55 @@ export async function POST(req: NextRequest) {
       {
         type: "user",
         message: `title:${title}; description:${description}; style:${style}; thumbnailText:${thumbnailText}`,
-      }
-    ]
+      },
+    ];
 
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email as string },
-    });
-
-    if (user) {
-      try {
-        const result = await prisma.$transaction(async (tx) => {
-          const thumbnail = await tx.thumbnail.create({
-            data: { userId: user.id, title, channelId, inputImage: imageUrl },
-          });
-          const thumbnailVersion = await tx.thumbnailVersion.create({
-            data: {
-              id: thumbnailVersionId,
-              thumbnailId: thumbnail.id,
-              input,
-            },
-          });
-          return { thumbnail, thumbnailVersion };
+    try {
+      const result = await prisma.$transaction(async (tx) => {
+        const thumbnail = await tx.thumbnail.create({
+          data: { userId: userId, title, channelId, inputImage: imageUrl },
         });
-        // enqueue job for worker to process
-        await thumbnailQueue.add("generate", {
+        const thumbnailVersion = await tx.thumbnailVersion.create({
+          data: {
+            id: thumbnailVersionId,
+            thumbnailId: thumbnail.id,
+            input,
+          },
+        });
+        return { thumbnail, thumbnailVersion };
+      });
+      // enqueue job for worker to process
+      await thumbnailQueue.add("generate", {
+        thumbnailId: result.thumbnail.id,
+        thumbnailVersionId: result.thumbnailVersion.id,
+      });
+
+      console.log(
+        {
           thumbnailId: result.thumbnail.id,
-          thumbnailVersionId: result.thumbnailVersion.id
-        });
-
-        console.log({
-            thumbnailId: result.thumbnail.id,
-            thumbnailVersionId: result.thumbnailVersion.id,
-            queued: true,
-          }, "Generated thumbnail version queued");
-        return new Response(
-          JSON.stringify({
-            thumbnailId: result.thumbnail.id,
-            thumbnailVersionId: result.thumbnailVersion.id,
-            queued: true,
-          }),
-          {
-            status: 200,
-          }
-        );
-      } catch (e) {
-        return new NextResponse(JSON.stringify({ error: "Bad Request" }), {
-          status: 400,
-        });
-      }
-    } else {
-      return new NextResponse(JSON.stringify({ error: "User not found" }), {
-        status: 404,
+          thumbnailVersionId: result.thumbnailVersion.id,
+          queued: true,
+        },
+        "Generated thumbnail version queued"
+      );
+      return new Response(
+        JSON.stringify({
+          thumbnailId: result.thumbnail.id,
+          thumbnailVersionId: result.thumbnailVersion.id,
+          queued: true,
+        }),
+        {
+          status: 200,
+        }
+      );
+    } catch (e) {
+      return new NextResponse(JSON.stringify({ error: "Bad Request" }), {
+        status: 400,
       });
     }
   } catch (e) {
-    return new NextResponse(JSON.stringify({ error: "unauth" }), { status: 401 });
+    return new NextResponse(JSON.stringify({ error: "unauth" }), {
+      status: 401,
+    });
   }
 }

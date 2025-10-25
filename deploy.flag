@@ -1,2 +1,2 @@
 deploy_dev=false
-deploy_prod=true
+deploy_prod=false

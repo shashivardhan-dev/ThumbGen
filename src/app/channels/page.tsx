@@ -16,6 +16,7 @@ import {
   setFormMode,
   setSelectedChannel,
 } from "../../lib/store/features/channels/channelsSlice";
+import { toast } from "react-toastify";
 
 interface FormData {
   name: string;
@@ -78,7 +79,6 @@ export default function Channels() {
   });
 
   const [errors, setErrors] = useState<FormErrors>({});
-  const [successMessage, setSuccessMessage] = useState("");
 
   const isLoading = isCreating || isUpdating || isDeleting;
 
@@ -95,7 +95,7 @@ export default function Channels() {
         });
 
         if (channelData.logoUrl) {
-          const url = `https://thumbnailgenai.s3.ap-south-1.amazonaws.com/thumbnails/808e21c3-2c0a-4f88-b2d0-980cffa0ebc0.png`;
+          const url = `https://thumbnailgenai.s3.ap-south-1.amazonaws.com/${channelData.logoUrl}`;
           console.log(url);
           setImagePreview(url);
           setFileName("");
@@ -157,7 +157,6 @@ export default function Channels() {
     }
 
     setErrors({});
-    setSuccessMessage("");
   };
 
   // Handle edit button click
@@ -165,7 +164,6 @@ export default function Channels() {
     if (selectedChannel) {
       dispatch(setFormMode("edit"));
       setErrors({});
-      setSuccessMessage("");
     }
   };
 
@@ -193,7 +191,6 @@ export default function Channels() {
       dispatch(setFormDirty(false));
     }
     setErrors({});
-    setSuccessMessage("");
   };
 
   // Handle file validation and processing
@@ -337,22 +334,26 @@ export default function Channels() {
     }
 
     setErrors({});
-    setSuccessMessage("");
 
     try {
       if (formMode === "edit" && selectedChannel) {
+        try{
         const result = await editChannel({
           id: selectedChannel,
           ...formData,
         }).unwrap();
 
-        console.log("Update result:", result);
-        setSuccessMessage("Channel profile updated successfully!");
+        toast.success("Channel profile updated successfully!");
         dispatch(setFormMode("view"));
+      }
+      catch (error: any) {
+        console.error( error);
+        toast.error("Error updating channel");
+      }
       } else {
+        try{
         const result = await createChannel(formData).unwrap();
-        console.log("Create result:", result);
-        setSuccessMessage("Channel profile created successfully!");
+        toast.success("Channel profile created successfully!");
 
         // Reset form after creation
         setFormData({
@@ -366,13 +367,15 @@ export default function Channels() {
         dispatch(setSelectedChannel(null));
         dispatch(setFormMode("create"));
       }
+      catch (error: any) {
+        console.error( error);
+        toast.error("Error creating channel");
+
+      }
+      }
 
       dispatch(setFormDirty(false));
 
-      // Clear success message after 5 seconds
-      setTimeout(() => {
-        setSuccessMessage("");
-      }, 5000);
     } catch (error: any) {
       console.error("Save error:", error);
       setErrors({
@@ -400,11 +403,11 @@ export default function Channels() {
     }
 
     setErrors({});
-    setSuccessMessage("");
 
     try {
       await deleteChannel(selectedChannel).unwrap();
-      setSuccessMessage("Channel profile deleted successfully!");
+
+      toast.success("Channel profile deleted successfully!");
 
       // Reset form
       setFormData({
@@ -419,15 +422,13 @@ export default function Channels() {
       dispatch(setFormMode("create"));
       dispatch(setFormDirty(false));
 
-      setTimeout(() => {
-        setSuccessMessage("");
-      }, 5000);
     } catch (error: any) {
       console.error("Delete error:", error);
       setErrors({
         submit:
           error?.data?.message || error?.message || "Failed to delete profile",
       });
+      toast.error("Failed to delete profile");
     }
   };
 
@@ -444,7 +445,6 @@ export default function Channels() {
     setImagePreview(null);
     setFileName("");
     setErrors({});
-    setSuccessMessage("");
     dispatch(setFormDirty(false));
   };
 
@@ -549,19 +549,6 @@ export default function Channels() {
               Manage channel identities for your different YouTube channels.
             </p>
           </div>
-
-          {/* Success Message */}
-          {successMessage && (
-            <div
-              className={`mb-6 p-4 rounded-md border ${
-                isToggled
-                  ? "bg-green-900/20 border-green-500"
-                  : "bg-green-50 border-green-200"
-              }`}
-            >
-              <p className={`${themeClasses.success}`}>{successMessage}</p>
-            </div>
-          )}
 
           {/* Error Message */}
           {errors.submit && (
@@ -693,8 +680,7 @@ export default function Channels() {
                 </h3>
 
                 <div className="flex items-start gap-6">
-                  {/* Image Preview Area */}
-                  <div className="flex-shrink-0">
+                  <div className="shrink-0">
                     <div
                       className={`relative flex h-32 w-32 items-center justify-center rounded-lg border-2 transition-colors ${
                         dragActive

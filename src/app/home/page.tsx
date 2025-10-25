@@ -1,18 +1,13 @@
 "use client";
 
-import { useSession } from "next-auth/react";
 import Navbar from "../../components/Navbar";
 import { redirect } from "next/navigation";
-import Link from "next/link";
-import Image from "next/image";
 import { Sparkles, Lightbulb, Wand2, Edit } from "lucide-react";
 import { useToggle } from "../../contexts/toggle";
 
 export default function Home() {
-  const { data: session, status } = useSession();
+
   const { isToggled, isLoaded } = useToggle();
-  if (status === "loading") return <div>Loading...</div>;
-  if (session === null) return redirect("/");
 
 
   // Don't render with theme styles until loaded

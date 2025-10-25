@@ -7,7 +7,7 @@ import { createAdapter } from "@socket.io/redis-adapter";
 import Redis from "ioredis";
 
 const app = next({
-  dev: false,
+  dev: true,
 });
 const handle = app.getRequestHandler();
 
@@ -212,7 +212,7 @@ app.prepare().then(async () => {
 
   const host = parseInt("0.0.0.0", 10);
 
-  httpServer.listen(PORT, host, () => {
+  httpServer.listen(PORT, () => {
     console.log(`🚀 Next.js + Socket.IO running on http://localhost:${PORT}`);
   });
 });

@@ -32,6 +32,7 @@ export const channelsApi = createApi({
       // Add any auth headers if needed
       return headers
     },
+    credentials: 'include',
   }),
   tagTypes: ['Channel'],
   endpoints: (builder) => ({

@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useToggle } from "../../contexts/toggle";
 import Image from "next/image";
 import {
@@ -13,9 +13,15 @@ import {
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
-import { useGetDesignsQuery } from "../../lib/store/features/designs/designsAPI";
+import {
+  useGetDesignsQuery,
+  useAddFavouriteMutation,
+  useRemoveFavouriteMutation,
+} from "../../lib/store/features/designs/designsAPI";
 import { useRouter } from "next/navigation";
 import Navbar from "../../components/Navbar";
+import Fuse from "fuse.js";
+import { search } from "../../lib/utils/search";
 
 interface ThumbnailVersion {
   id: string;
@@ -36,27 +42,89 @@ interface Thumbnail {
 }
 
 export default function MyDesignsPage() {
-  const { isToggled } = useToggle();
+  const { isToggled } = useToggle(); // for dark mode
   const [searchQuery, setSearchQuery] = useState("");
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [currentVersions, setCurrentVersions] = useState<{
     [key: string]: number;
   }>({});
 
+  const [filteredThumbnails, setFilteredThumbnails] = useState<Thumbnail[]>([]);
+  const [sort, setSort] = useState(false);
+
   const router = useRouter();
 
   // Sample data - replace with your actual data fetching
   const [thumbnails, setThumbnails] = useState<Thumbnail[]>([]);
 
+  const fuse = useMemo(() => {
+    return new Fuse(thumbnails, {
+      keys: ["title"],
+      threshold: 0.3,
+    });
+  }, []);
+
   const { data: designsData, isLoading, isError } = useGetDesignsQuery();
+
+  const [addFavourite] = useAddFavouriteMutation();
+  const [removeFavourite] = useRemoveFavouriteMutation();
 
   useEffect(() => {
     if (designsData?.designs) {
       setThumbnails(designsData?.designs);
+      setFilteredThumbnails(designsData?.designs);
     }
   }, [designsData?.designs]);
 
-  console.log("Thumbnails:", thumbnails);
+  useEffect(() => {
+    if (!showFavoritesOnly) {
+      setFilteredThumbnails(thumbnails);
+      const handler = setTimeout(() => {
+        const searchThumbnails = search(fuse, searchQuery, thumbnails);
+
+        setFilteredThumbnails(searchThumbnails);
+      }, 300);
+
+      return () => {
+        clearTimeout(handler);
+      };
+    }
+  }, [searchQuery, fuse]);
+
+  const handleFavourite =  () => {
+       setShowFavoritesOnly(!showFavoritesOnly);
+
+    if(!showFavoritesOnly) {
+      console.log("showFavoritesOnly");
+    const filteredFavThumbnails = thumbnails.filter((thumbnail) => {
+      const matchesFavorites =  thumbnail.isFavourite
+      return matchesFavorites;
+    });
+    console.log("filteredFavThumbnails", filteredFavThumbnails);
+
+    setFilteredThumbnails(filteredFavThumbnails);
+  } else{
+    console.log("showAllThumbnails");
+    setFilteredThumbnails(thumbnails);
+  }
+  };
+
+  const handleSort = () => {
+    console.log("sortedThumbnails");
+    setSort(!sort);
+    if (sort) {
+      const sortedThumbnails = thumbnails.sort((a, b) => {
+        const aDate = new Date(a.createdAt);
+        const bDate = new Date(b.createdAt);
+        return sort
+          ? bDate.getTime() - aDate.getTime()
+          : aDate.getTime() - bDate.getTime();
+      });
+      setFilteredThumbnails(sortedThumbnails);
+    } else {
+      setFilteredThumbnails(thumbnails);
+    }
+  };
 
   if (isLoading) return <div>Loading...</div>;
   if (isError) return <div>Error</div>;
@@ -64,10 +132,6 @@ export default function MyDesignsPage() {
   const themeClasses = isToggled
     ? "bg-gray-900 text-white"
     : "bg-gray-50 text-gray-900";
-
-  const cardClasses = isToggled
-    ? "bg-gray-800 border-gray-700"
-    : "bg-white border-gray-200";
 
   const inputClasses = isToggled
     ? "bg-gray-800 border-gray-700 text-white placeholder-gray-400"
@@ -81,6 +145,9 @@ export default function MyDesignsPage() {
     ? "bg-red-500 border-red-500 text-white hover:bg-red-600"
     : buttonClasses;
 
+  const sortButtonClasses = sort
+    ? "bg-red-500 border-red-500 text-white hover:bg-red-600"
+    : buttonClasses;
   const textColor = isToggled ? "text-white" : "text-gray-900";
   const subtitleColor = isToggled ? "text-gray-400" : "text-gray-500";
 
@@ -105,19 +172,25 @@ export default function MyDesignsPage() {
   };
 
   const handleEdit = (thumbnailId: string) => {
-    // Navigate to edit page
     router.push(`/edit/${thumbnailId}`);
-    console.log("Edit thumbnail:", thumbnailId);
   };
 
-  const handleDuplicate = (thumbnailId: string) => {
-    // Duplicate thumbnail logic
-    console.log("Duplicate thumbnail:", thumbnailId);
-  };
+  const handleDownload = async (s3key: string) => {
+    const fileUrl = `https://thumbnailgenai.s3.ap-south-1.amazonaws.com/${s3key}`;
+    const response = await fetch(fileUrl);
+    console.log("Response:", response);
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
 
-  const handleDownload = (thumbnailId: string) => {
-    // Download thumbnail logic
-    console.log("Download thumbnail:", thumbnailId);
+    const link = document.createElement("a");
+    link.href = url;
+    const title = "test";
+    link.download = `${title.replace(/[^a-zA-Z0-9]/g, "_")}_thumbnail.jpg`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    window.URL.revokeObjectURL(url);
   };
 
   const toggleFavorite = (thumbnailId: string) => {
@@ -128,15 +201,13 @@ export default function MyDesignsPage() {
           : thumbnail
       )
     );
-  };
 
-  const filteredThumbnails = thumbnails.filter((thumbnail) => {
-    const matchesSearch = (thumbnail.title || "")
-      .toLowerCase()
-      .includes(searchQuery.toLowerCase());
-    const matchesFavorites = showFavoritesOnly ? thumbnail.isFavourite : true;
-    return matchesSearch && matchesFavorites;
-  });
+    if (thumbnails.find((t) => t.id === thumbnailId)?.isFavourite) {
+      removeFavourite(thumbnailId);
+    } else {
+      addFavourite(thumbnailId);
+    }
+  };
 
   return (
     <div
@@ -151,7 +222,6 @@ export default function MyDesignsPage() {
               My Designs
             </h1>
 
-            {/* Search and Filter Controls */}
             <div className="flex flex-col md:flex-row items-center gap-4 w-full md:w-auto">
               <div className="relative w-full md:w-96">
                 <Search
@@ -169,7 +239,7 @@ export default function MyDesignsPage() {
 
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
+                  onClick={() => handleFavourite()}
                   className={`flex items-center gap-2 font-medium px-4 py-2 rounded-full transition-colors border focus:outline-none focus:ring-2 focus:ring-red-500 ${favoritesButtonClasses}`}
                 >
                   <Star
@@ -179,15 +249,16 @@ export default function MyDesignsPage() {
                   <span>Favorites</span>
                 </button>
 
-                <button
+                {/* <button
                   className={`flex items-center gap-2 font-medium px-4 py-2 rounded-full transition-colors border focus:outline-none focus:ring-2 focus:ring-red-500 ${buttonClasses}`}
                 >
                   <FilterIcon size={18} />
                   <span>Filter</span>
-                </button>
+                </button> */}
 
                 <button
-                  className={`flex items-center gap-2 font-medium px-4 py-2 rounded-full transition-colors border focus:outline-none focus:ring-2 focus:ring-red-500 ${buttonClasses}`}
+                  onClick={() => handleSort()}
+                  className={`flex items-center gap-2 font-medium px-4 py-2 rounded-full transition-colors border focus:outline-none focus:ring-2 focus:ring-red-500 ${sortButtonClasses}`}
                 >
                   <ArrowUpWideNarrow size={18} />
                   <span>Sort</span>
@@ -218,7 +289,9 @@ export default function MyDesignsPage() {
                       height={300}
                       alt={thumbnail.title || "Untitled"}
                       className="w-full h-full object-contain"
-                         onLoad={() => console.log('✅ Image loaded:', currentVersion.s3Key)}
+                      onLoad={() =>
+                        console.log("✅ Image loaded:", currentVersion.s3Key)
+                      }
                       onError={(e) => {
                         console.error(
                           "❌ Image failed to load:",
@@ -228,7 +301,6 @@ export default function MyDesignsPage() {
                       }}
                     />
 
-                    {/* Version Navigation Arrows */}
                     {hasMultipleVersions && (
                       <>
                         <button
@@ -267,7 +339,6 @@ export default function MyDesignsPage() {
                       </>
                     )}
 
-                    {/* Hover Overlay */}
                     <div className="absolute inset-0 bg-opacity-0 group-hover:bg-opacity-60 transition-all duration-300 flex items-center justify-center p-4">
                       <div className="flex items-center gap-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                         <button
@@ -280,22 +351,10 @@ export default function MyDesignsPage() {
                         >
                           <Edit size={20} />
                         </button>
-
                         <button
-                          onClick={(e) => {
+                          onClick={async (e) => {
                             e.stopPropagation();
-                            handleDuplicate(thumbnail.id);
-                          }}
-                          className="flex items-center justify-center w-12 h-12 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-full text-white transition-colors"
-                          title="Duplicate"
-                        >
-                          <Copy size={20} />
-                        </button>
-
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDownload(thumbnail.id);
+                            await handleDownload(currentVersion.s3Key);
                           }}
                           className="flex items-center justify-center w-12 h-12 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-full text-white transition-colors"
                           title="Export"
@@ -348,7 +407,6 @@ export default function MyDesignsPage() {
             })}
           </div>
 
-          {/* Empty State */}
           {filteredThumbnails.length === 0 && (
             <div className={`text-center py-12 ${subtitleColor}`}>
               <p className="text-lg">No designs found</p>
@@ -362,34 +420,6 @@ export default function MyDesignsPage() {
         </div>
       </main>
 
-      {/* Footer */}
-      <footer
-        className={`w-full border-t transition-colors duration-300 ${
-          isToggled
-            ? "bg-gray-800 border-gray-700"
-            : "bg-gray-100 border-gray-200"
-        }`}
-      >
-        <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-center space-x-6">
-            <a
-              className={`hover:text-red-500 transition-colors ${subtitleColor}`}
-              href="#"
-            >
-              Terms of Service
-            </a>
-            <a
-              className={`hover:text-red-500 transition-colors ${subtitleColor}`}
-              href="#"
-            >
-              Privacy Policy
-            </a>
-          </div>
-          <p className={`mt-8 text-center text-base ${subtitleColor}`}>
-            © 2024 ThumbGen. All rights reserved.
-          </p>
-        </div>
-      </footer>
     </div>
   );
 }

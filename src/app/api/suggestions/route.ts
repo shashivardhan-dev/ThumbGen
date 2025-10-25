@@ -1,8 +1,14 @@
 import { NextRequest,NextResponse } from "next/server";
+import { auth } from "@clerk/nextjs/server";
 import { createSuggestionsAIClient } from "../../../lib/openAI/suggestions";
 import { ChatCompletionMessageParam } from "openai/resources/chat/completions";
 
 export async function POST(req: NextRequest) {
+
+       const { isAuthenticated, userId } = await auth();
+
+    if (!isAuthenticated)
+      return new Response(JSON.stringify({ error: "unauth" }), { status: 401 });
 
 
   const chat = await req.json();
