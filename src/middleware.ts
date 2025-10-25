@@ -4,16 +4,23 @@ import { NextResponse } from "next/server";
 const isProtectedRoute = createRouteMatcher([
   "/create(.*)",
   "/edit(.*)",
-  "/api/(.*)",
+  "/api/(.*)", // Match all /api/* first
 ]);
 
 export default clerkMiddleware(async (auth, req) => {
-  const { userId } = await auth(); // ✅ Await here
+  const { userId } = await auth();
+  const { pathname } = req.nextUrl;
 
+  // ✅ Skip auth for health endpoint
+  if (pathname === "/api/health") {
+    return NextResponse.next();
+  }
+
+  // ✅ Protect other routes
   if (!userId && isProtectedRoute(req)) {
     const signInUrl = new URL("/sign-in", req.url);
     signInUrl.searchParams.set("redirect_url", req.url);
-    return NextResponse.redirect(signInUrl); // ✅ Use NextResponse
+    return NextResponse.redirect(signInUrl);
   }
 
   return NextResponse.next();
