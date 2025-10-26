@@ -62,7 +62,7 @@ export default function MyDesignsPage() {
       keys: ["title"],
       threshold: 0.3,
     });
-  }, []);
+  }, [thumbnails]);
 
   const { data: designsData, isLoading, isError } = useGetDesignsQuery();
 
@@ -80,6 +80,7 @@ export default function MyDesignsPage() {
     if (!showFavoritesOnly) {
       setFilteredThumbnails(thumbnails);
       const handler = setTimeout(() => {
+
         const searchThumbnails = search(fuse, searchQuery, thumbnails);
 
         setFilteredThumbnails(searchThumbnails);
@@ -227,7 +228,7 @@ export default function MyDesignsPage() {
                 />
                 <input
                   className={`w-full rounded-full py-3 pl-12 pr-4 border focus:outline-none focus:ring-2 focus:ring-red-500 transition-colors ${inputClasses}`}
-                  placeholder="Search by keyword, title, or tag"
+                  placeholder="Search by Title"
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
