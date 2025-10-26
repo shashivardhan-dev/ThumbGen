@@ -29,9 +29,7 @@ export const designsApi = createApi({
   reducerPath: "designsApi",
   baseQuery: fetchBaseQuery({
     baseUrl: "/api/",
-
     prepareHeaders: (headers) => {
-      // Add any auth headers if needed
       return headers;
     },
   }),
@@ -50,7 +48,29 @@ export const designsApi = createApi({
             ]
           : [{ type: "Design", id: "LIST" }],
     }),
+
+    addFavourite: builder.mutation<void, string>({
+      query: (id) => ({
+        url: `favourite/${id}`,
+        method: "POST",
+      }),
+      invalidatesTags: (result, error, id) => [
+        { type: "Design", id },
+        { type: "Design", id: "LIST" },
+      ],
+    }),
+
+    removeFavourite: builder.mutation<void, string>({
+      query: (id) => ({
+        url: `favourite/${id}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: (result, error, id) => [
+        { type: "Design", id },
+        { type: "Design", id: "LIST" },
+      ],
+    })
   }),
 });
 
-export const { useGetDesignsQuery } = designsApi;
+export const { useGetDesignsQuery, useAddFavouriteMutation, useRemoveFavouriteMutation } = designsApi;

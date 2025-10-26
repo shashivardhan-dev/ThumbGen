@@ -1,8 +1,10 @@
+// tsconfig.workers.json
 {
   "extends": "./tsconfig.server.json",
   "include": ["src/workers/**/*.ts"],
   "compilerOptions": {
-    "outDir": "build/workers",
+    "outDir": "build",
+    "rootDir": "src",
     "skipLibCheck": true,
     "noImplicitAny": false,
     "strictNullChecks": false,

@@ -1,4 +1,3 @@
-// src/components/SocketProvider.tsx
 'use client';
 
 import { 
@@ -12,7 +11,7 @@ import {
 } from 'react';
 import { io, Socket } from 'socket.io-client';
 
-// Enhanced types
+
 interface ThumbnailProgress {
   thumbnailVersionId: string;
   status: string;
@@ -20,7 +19,7 @@ interface ThumbnailProgress {
   message?: string;
   meta?: any;
   timestamp?: number;
-  operation?: 'generate' | 'edit'; // Added operation type
+  operation?: 'generate' | 'edit'; 
 }
 
 interface ThumbnailStatus {
@@ -29,7 +28,7 @@ interface ThumbnailStatus {
   progress: number;
   s3Key?: string;
   timestamp?: number;
-  operation?: 'generate' | 'edit'; // Added operation type
+  operation?: 'generate' | 'edit';
 }
 
 interface ConnectionMetrics {
@@ -97,11 +96,6 @@ export function SocketProvider({
   const pingIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const reconnectionAttemptsRef = useRef(0);
 
-  const log = useCallback((message: string, ...args: any[]) => {
-    if (debug) {
-      console.log(`[SocketProvider] ${message}`, ...args);
-    }
-  }, [debug]);
 
   const startPingMonitoring = useCallback((socketInstance: Socket) => {
     if (pingIntervalRef.current) {
@@ -119,50 +113,36 @@ export function SocketProvider({
           lastPing: Date.now()
         }));
         
-        log(`Ping response: ${latency}ms, transport: ${response?.transport}`);
       });
     }, 10000); // Ping every 10 seconds
-  }, [log]);
+  }, []);
 
   const forceReconnect = useCallback(() => {
-    log('Force reconnecting...');
     if (socket) {
       socket.disconnect();
       socket.connect();
     }
-  }, [socket, log]);
+  }, [socket]);
 
   useEffect(() => {
-    log('Initializing Socket.IO connection...');
 
-    // Enhanced socket configuration
     const socketInstance = io("http://localhost:3000",{
       path: "/socket",
-      // Remove path since we're using custom server
       transports: ['websocket'],
       timeout: 20000,
       forceNew: true,
       autoConnect: true,
-      
-      // Enhanced reconnection settings
       reconnection: true,
       reconnectionAttempts: maxReconnectionAttempts,
       reconnectionDelay: reconnectionDelay,
       reconnectionDelayMax: 5000,
       randomizationFactor: 0.5,
-      
-      // Transport-specific settings
-      // upgradeTimeout: 30000,
-      
-      // Additional options for better handling
       closeOnBeforeunload: false,
     });
 
     // Connection success
     socketInstance.on('connect', () => {
-      const currentTransport = socketInstance.io.engine.transport.name;
-      log(`Connected via ${currentTransport}:`, socketInstance.id);
-      
+      const currentTransport = socketInstance.io.engine.transport.name;      
       setIsConnected(true);
       setTransport(currentTransport);
       setConnectionError(null);
@@ -179,9 +159,7 @@ export function SocketProvider({
 
     // Transport upgrade handling
     socketInstance.io.engine.on('upgrade', () => {
-      const newTransport = socketInstance.io.engine.transport.name;
-      log(`Upgraded to ${newTransport} transport`);
-      
+      const newTransport = socketInstance.io.engine.transport.name;      
       setTransport(newTransport);
       setConnectionMetrics(prev => ({
         ...prev,
@@ -190,14 +168,11 @@ export function SocketProvider({
     });
 
     socketInstance.io.engine.on('upgradeError', (error) => {
-      log('Transport upgrade failed:', error);
     });
 
     // Connection errors
     socketInstance.on('connect_error', (error) => {
       reconnectionAttemptsRef.current++;
-      log('Connection error:', error, `(attempt ${reconnectionAttemptsRef.current})`);
-      
       setConnectionError(error.message);
       setIsConnected(false);
       setConnectionMetrics(prev => ({
@@ -208,7 +183,6 @@ export function SocketProvider({
 
     // Disconnection handling
     socketInstance.on('disconnect', (reason) => {
-      log('Disconnected:', reason);
       setIsConnected(false);
       setTransport('');
       
@@ -222,14 +196,12 @@ export function SocketProvider({
         // Server initiated disconnect - reconnect manually
         socketInstance.connect();
       } else if (reason === 'ping timeout') {
-        log('Ping timeout - connection lost');
         setConnectionError('Connection timeout');
       }
     });
 
     // Reconnection attempt tracking
     socketInstance.on('reconnect_attempt', (attemptNumber) => {
-      log(`Reconnection attempt ${attemptNumber}/${maxReconnectionAttempts}`);
       setConnectionMetrics(prev => ({
         ...prev,
         reconnectionAttempts: attemptNumber
@@ -237,18 +209,15 @@ export function SocketProvider({
     });
 
     socketInstance.on('reconnect', (attemptNumber) => {
-      log(`Reconnected after ${attemptNumber} attempts`);
       setConnectionError(null);
     });
 
     socketInstance.on('reconnect_failed', () => {
-      log('Reconnection failed - max attempts reached');
       setConnectionError('Failed to reconnect - max attempts reached');
     });
 
     // General error handler
     socketInstance.on('error', (error) => {
-      log('Socket error:', error);
       setConnectionError(error.message || 'Socket error occurred');
     });
 
@@ -272,7 +241,6 @@ export function SocketProvider({
 
     // Cleanup
     return () => {
-      log('Cleaning up socket connection');
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       
       if (pingIntervalRef.current) {
@@ -281,7 +249,7 @@ export function SocketProvider({
       
       socketInstance.disconnect();
     };
-  }, [log, maxReconnectionAttempts, reconnectionDelay, startPingMonitoring]);
+  }, [ maxReconnectionAttempts, reconnectionDelay, startPingMonitoring]);
 
   return (
     <SocketContext.Provider value={{ 
@@ -297,7 +265,7 @@ export function SocketProvider({
   );
 }
 
-// Enhanced thumbnail socket hook with operation-specific support
+
  function useThumbnailSocket(thumbnailVersionId?: string, operation?: 'generate' | 'edit') {
   console.log("thumbnailVersionId", thumbnailVersionId, "operation", operation);
   const { socket, isConnected, transport } = useSocket();
@@ -312,13 +280,8 @@ export function SocketProvider({
   
   const statusTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // const log = useCallback((message: string, ...args: any[]) => {
-  //   console.log(`[useThumbnailSocket:${thumbnailVersionId}:${operation}] ${message}`, ...args);
-  // }, [thumbnailVersionId, operation]);
 
-  // Join/leave room management
   useEffect(() => {
-   // console.log("thumbnailVersionId", thumbnailVersionId, "operation", operation);
     if (!socket || !isConnected || !thumbnailVersionId) {
       console.log("Socket not connected or thumbnailVersionId not provided");
       setIsInRoom(false);
@@ -326,8 +289,6 @@ export function SocketProvider({
       setIsInEditRoom(false);
       return;
     }
-
- //   log(`Joining rooms via ${transport}`);
     
     // Always join the general thumbnail room
     socket.emit('join-thumbnail', thumbnailVersionId);
@@ -346,49 +307,39 @@ export function SocketProvider({
       transport?: string;
       clientId?: string;
     }) => {
-  //    log(`Joined general room:`, data);
       setIsInRoom(true);
     };
 
     const handleJoinedGenerate = (data: { thumbnailVersionId: string; room: string }) => {
-    //  log(`Joined generate room:`, data);
       setIsInGenerateRoom(true);
     };
 
     const handleJoinedEdit = (data: { thumbnailVersionId: string; room: string }) => {
-   //   log(`Joined edit room:`, data);
       setIsInEditRoom(true);
     };
 
     const handleLeft = (data: { thumbnailVersionId: string }) => {
-  //    log(`Left rooms:`, data);
       setIsInRoom(false);
       setIsInGenerateRoom(false);
       setIsInEditRoom(false);
     };
 
     const handleProgress = (data: ThumbnailProgress) => {
-  //    console.log(data, "general progress coming");
       if (data.thumbnailVersionId === thumbnailVersionId) {
-  //      log(`General progress update: ${data.status} ${data.pct}% (${data.operation})`);
         setProgress(data);
         setLastUpdate(Date.now());
       }
     };
 
     const handleGenerateProgress = (data: ThumbnailProgress) => {
-   //   console.log(data, "generate progress coming");
       if (data.thumbnailVersionId === thumbnailVersionId) {
-    //    log(`Generate progress update: ${data.status} ${data.pct}%`);
         setGenerateProgress(data);
         setLastUpdate(Date.now());
       }
     };
 
     const handleEditProgress = (data: ThumbnailProgress) => {
-   //   console.log(data, "edit progress coming");
       if (data.thumbnailVersionId === thumbnailVersionId) {
-    //    log(`Edit progress update: ${data.status} ${data.pct}%`);
         setEditProgress(data);
         setLastUpdate(Date.now());
       }
@@ -396,7 +347,6 @@ export function SocketProvider({
 
     const handleStatus = (data: ThumbnailStatus) => {
       if (data.thumbnailVersionId === thumbnailVersionId) {
-     //   log(`Status update: ${data.status} (${data.progress}%) - ${data.operation}`);
         setStatus(data);
         setLastUpdate(Date.now());
       }
@@ -404,12 +354,10 @@ export function SocketProvider({
 
     const handleError = (data: { thumbnailVersionId: string; error: string; operation?: string }) => {
       if (data.thumbnailVersionId === thumbnailVersionId) {
-      //  log(`Error (${data.operation}):`, data.error);
-        // You might want to set an error state here
+console.log("error", data);
       }
     };
 
-    // Register event listeners
     socket.on('joined', handleJoined);
     socket.on('joined-generate', handleJoinedGenerate);
     socket.on('joined-edit', handleJoinedEdit);
@@ -420,11 +368,9 @@ export function SocketProvider({
     socket.on('thumbnail:status', handleStatus);
     socket.on('thumbnail:error', handleError);
 
-    // Cleanup
+
     return () => { 
-   //   log(`Leaving rooms`);
       socket.emit('leave-thumbnail', thumbnailVersionId);
-      
       socket.off('joined', handleJoined);
       socket.off('joined-generate', handleJoinedGenerate);
       socket.off('joined-edit', handleJoinedEdit);
@@ -445,23 +391,12 @@ export function SocketProvider({
     };
   }, [socket, isConnected, thumbnailVersionId, operation, transport]);
 
-  // Request status with timeout
   const requestStatus = useCallback(() => {
     if (!socket || !isConnected || !thumbnailVersionId) {
-      //log('Cannot request status - not connected or no thumbnailId');
       return Promise.reject(new Error('Not connected'));
     }
 
     return new Promise<void>((resolve, reject) => {
-    //  log('Requesting status...');
-      
-      // Set timeout for status request
-      // statusTimeoutRef.current = setTimeout(() => {
-      //   log('Status request timed out');
-      //   reject(new Error('Status request timed out'));
-      // }, 10000);
-
-      // Listen for status response
       const handleStatus = (data: ThumbnailStatus) => {
         if (data.thumbnailVersionId === thumbnailVersionId) {
           if (statusTimeoutRef.current) {
@@ -480,9 +415,7 @@ export function SocketProvider({
     socket, 
     isConnected, 
     transport,
-    // General progress (contains operation info)
     progress, 
-    // Operation-specific progress
     generateProgress,
     editProgress,
     status, 

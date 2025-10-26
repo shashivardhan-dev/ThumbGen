@@ -5,14 +5,12 @@ import { redirect, useRouter } from 'next/navigation';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import Image from 'next/image';
-import { useSession } from 'next-auth/react';
 import { useToggle } from '../../contexts/toggle';
 import { useAppDispatch, useAppSelector } from '../../lib/store/hooks';
 import { useGetChannelsQuery } from '../../lib/store/features/channels/channelsAPI';
 import { setSelectedChannel } from '../../lib/store/features/channels/channelsSlice';
 
 export default function CreatePage() {
-  const { data: session, status } = useSession();
   const { isToggled } = useToggle();
   const dispatch = useAppDispatch();
   const { selectedChannel } = useAppSelector((state) => state.channels);
@@ -34,8 +32,7 @@ export default function CreatePage() {
     error: channelsError,
   } = useGetChannelsQuery();
 
-   if (status === 'loading') return <div>Loading...</div>;
-  if (session === null) return redirect('/');
+
 
   const channels = dataChannels?.channels || [];
 

@@ -1,16 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "../../../../lib/prisma";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "../../../../lib/auth";
+import { auth } from "@clerk/nextjs/server";
 import { thumbnailQueue } from "../../../../lib/queue";
-import { streamToBuffer } from "../../../../lib/utils/image";
-import { uploadBuffer } from "../../../../lib/s3";
-import { v4 as uuid } from "uuid";
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user)
+    const { isAuthenticated, userId } = await auth();
+
+    if (!isAuthenticated)
       return new Response(JSON.stringify({ error: "unauth" }), { status: 401 });
 
     const data = await req.json();
@@ -25,8 +22,6 @@ export async function POST(req: NextRequest) {
       return new Response(JSON.stringify({ error: "Thumbnail not found" }), {
         status: 404,
       });
-
-      const userId = (session.user as { id: string }).id;
 
     if (thumbnail.userId !== userId)
       return new NextResponse(JSON.stringify({ error: "Unauthorized" }), {
@@ -50,6 +45,8 @@ export async function POST(req: NextRequest) {
       { status: 200 }
     );
   } catch (err) {
-    return new NextResponse(JSON.stringify({ error: "unauth" }), { status: 401 });
+    return new NextResponse(JSON.stringify({ error: "unauth" }), {
+      status: 401,
+    });
   }
 }
