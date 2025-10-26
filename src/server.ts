@@ -7,11 +7,10 @@ import { createAdapter } from "@socket.io/redis-adapter";
 import Redis from "ioredis";
 
 const app = next({
-  dev:false,
+  dev: process.env.NODE_ENV !== "production",
 });
 const handle = app.getRequestHandler();
 
-console.log("process.env.NODE_ENV", process.env.NODE_ENV);
 // Redis connection with authentication
 const redisOptions = {
   host: process.env.REDIS_HOST || "localhost",
@@ -63,13 +62,10 @@ async function setupSocketIO(httpServer: any) {
 
   // Create Socket.IO server
   io = new Server(httpServer, {
-    path: "/socket", // Changed from "/api/socket" to "/socket"
+    path: "/socket",
     transports: ["websocket"],
     cors: {
-      origin:
-        process.env.NODE_ENV === "production"
-          ? process.env.FRONTEND_URL
-          : ["http://localhost:3000", "http://localhost:3001"],
+      origin:process.env.FRONTEND_URL,
       methods: ["GET", "POST"],
       credentials: true,
     },
