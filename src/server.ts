@@ -7,11 +7,10 @@ import { createAdapter } from "@socket.io/redis-adapter";
 import Redis from "ioredis";
 
 const app = next({
-  dev:false,
+  dev: process.env.NODE_ENV !== "production",
 });
 const handle = app.getRequestHandler();
 
-console.log("process.env.NODE_ENV", process.env.NODE_ENV);
 // Redis connection with authentication
 const redisOptions = {
   host: process.env.REDIS_HOST || "localhost",

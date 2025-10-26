@@ -220,7 +220,7 @@ ${
             response.candidates[0].content.parts[0].inlineData.data,
             "base64"
           );
-          fs.writeFileSync("photorealistic_example.png", buffer);
+          // fs.writeFileSync("photorealistic_example.png", buffer);
           console.log("Image saved as photorealistic_example.png");
           await sendProgress("generated", 50);
 

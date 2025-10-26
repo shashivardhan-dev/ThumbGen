@@ -4,6 +4,7 @@ import Navbar from "../../components/Navbar";
 import { redirect } from "next/navigation";
 import { Sparkles, Lightbulb, Wand2, Edit } from "lucide-react";
 import { useToggle } from "../../contexts/toggle";
+import LoadingPage from "../../components/Loading";
 
 export default function Home() {
 
@@ -12,7 +13,7 @@ export default function Home() {
 
   // Don't render with theme styles until loaded
   if (!isLoaded) {
-    return <div>Loading...</div>; // or a proper loading component
+    return <div><LoadingPage isToggled={true} /></div>; // or a proper loading component
   }
 
   const handleClick = () => {
