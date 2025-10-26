@@ -1,8 +1,8 @@
 import { Worker } from "bullmq";
-import connection from "../lib/queue";
-import { getGeminiAI } from "../lib/geminiai";
-import { uploadBuffer, getSignedUrl } from "../lib/s3";
-import { prisma } from "../lib/prisma";
+import connection from "../lib/queue.js";
+import { getGeminiAI } from "../lib/geminiai.js";
+import { uploadBuffer, getSignedUrl } from "../lib/s3.js";
+import { prisma } from "../lib/prisma.js";
 import Redis from "ioredis";
 import fs from "fs";
 
@@ -220,7 +220,7 @@ ${
             response.candidates[0].content.parts[0].inlineData.data,
             "base64"
           );
-          fs.writeFileSync("photorealistic_example.png", buffer);
+          // fs.writeFileSync("photorealistic_example.png", buffer);
           console.log("Image saved as photorealistic_example.png");
           await sendProgress("generated", 50);
 

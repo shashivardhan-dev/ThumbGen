@@ -3,8 +3,9 @@
 import { useState, useEffect } from "react";
 import { useToggle } from "../../contexts/toggle";
 import Navbar from "../../components/Navbar";
-import { useUser, RedirectToSignIn, useReverification } from "@clerk/nextjs";
+import { useUser, useReverification } from "@clerk/nextjs";
 import { toast } from "react-toastify";
+import LoadingPage from "../../components/Loading";
 
 type FormErrors = {
   firstName?: string;
@@ -52,7 +53,7 @@ export default function AccountSettingsPage() {
   );
 
 
-  if (!user) return <div>Loading...</div>;
+  if (!user) return <div><LoadingPage isToggled={true} /></div>;
 
  
 

@@ -4,7 +4,6 @@ import { useToggle } from "../../contexts/toggle";
 import Image from "next/image";
 import {
   Search,
-  FilterIcon,
   ArrowUpWideNarrow,
   Edit,
   Copy,
@@ -22,6 +21,7 @@ import { useRouter } from "next/navigation";
 import Navbar from "../../components/Navbar";
 import Fuse from "fuse.js";
 import { search } from "../../lib/utils/search";
+import LoadingPage from "../../components/Loading";
 
 interface ThumbnailVersion {
   id: string;
@@ -62,7 +62,7 @@ export default function MyDesignsPage() {
       keys: ["title"],
       threshold: 0.3,
     });
-  }, []);
+  }, [thumbnails]);
 
   const { data: designsData, isLoading, isError } = useGetDesignsQuery();
 
@@ -80,6 +80,7 @@ export default function MyDesignsPage() {
     if (!showFavoritesOnly) {
       setFilteredThumbnails(thumbnails);
       const handler = setTimeout(() => {
+
         const searchThumbnails = search(fuse, searchQuery, thumbnails);
 
         setFilteredThumbnails(searchThumbnails);
@@ -89,28 +90,24 @@ export default function MyDesignsPage() {
         clearTimeout(handler);
       };
     }
-  }, [searchQuery, fuse]);
+  }, [searchQuery, fuse,thumbnails]);
 
   const handleFavourite =  () => {
        setShowFavoritesOnly(!showFavoritesOnly);
 
     if(!showFavoritesOnly) {
-      console.log("showFavoritesOnly");
     const filteredFavThumbnails = thumbnails.filter((thumbnail) => {
       const matchesFavorites =  thumbnail.isFavourite
       return matchesFavorites;
     });
-    console.log("filteredFavThumbnails", filteredFavThumbnails);
 
     setFilteredThumbnails(filteredFavThumbnails);
   } else{
-    console.log("showAllThumbnails");
     setFilteredThumbnails(thumbnails);
   }
   };
 
   const handleSort = () => {
-    console.log("sortedThumbnails");
     setSort(!sort);
     if (sort) {
       const sortedThumbnails = thumbnails.sort((a, b) => {
@@ -126,7 +123,9 @@ export default function MyDesignsPage() {
     }
   };
 
-  if (isLoading) return <div>Loading...</div>;
+
+
+  if (isLoading) return <div><LoadingPage isToggled={isToggled}/></div>;
   if (isError) return <div>Error</div>;
 
   const themeClasses = isToggled
@@ -178,7 +177,6 @@ export default function MyDesignsPage() {
   const handleDownload = async (s3key: string) => {
     const fileUrl = `https://thumbnailgenai.s3.ap-south-1.amazonaws.com/${s3key}`;
     const response = await fetch(fileUrl);
-    console.log("Response:", response);
     const blob = await response.blob();
     const url = window.URL.createObjectURL(blob);
 
@@ -230,7 +228,7 @@ export default function MyDesignsPage() {
                 />
                 <input
                   className={`w-full rounded-full py-3 pl-12 pr-4 border focus:outline-none focus:ring-2 focus:ring-red-500 transition-colors ${inputClasses}`}
-                  placeholder="Search by keyword, title, or tag"
+                  placeholder="Search by Title"
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
@@ -249,13 +247,6 @@ export default function MyDesignsPage() {
                   <span>Favorites</span>
                 </button>
 
-                {/* <button
-                  className={`flex items-center gap-2 font-medium px-4 py-2 rounded-full transition-colors border focus:outline-none focus:ring-2 focus:ring-red-500 ${buttonClasses}`}
-                >
-                  <FilterIcon size={18} />
-                  <span>Filter</span>
-                </button> */}
-
                 <button
                   onClick={() => handleSort()}
                   className={`flex items-center gap-2 font-medium px-4 py-2 rounded-full transition-colors border focus:outline-none focus:ring-2 focus:ring-red-500 ${sortButtonClasses}`}
@@ -273,10 +264,6 @@ export default function MyDesignsPage() {
               const currentVersion = getCurrentVersion(thumbnail);
               const currentVersionIndex = currentVersions[thumbnail.id] || 0;
               const hasMultipleVersions = thumbnail.versions.length > 1;
-              console.log(hasMultipleVersions, thumbnail.versions.length);
-              console.log(
-                `https://thumbnailgenai.s3.ap-south-1.amazonaws.com/${currentVersion.s3Key}`
-              );
               return (
                 <div
                   key={thumbnail.id}
@@ -289,15 +276,11 @@ export default function MyDesignsPage() {
                       height={300}
                       alt={thumbnail.title || "Untitled"}
                       className="w-full h-full object-contain"
-                      onLoad={() =>
-                        console.log("✅ Image loaded:", currentVersion.s3Key)
-                      }
                       onError={(e) => {
                         console.error(
                           "❌ Image failed to load:",
                           currentVersion.s3Key
                         );
-                        // Optional: Set a fallback image
                       }}
                     />
 
