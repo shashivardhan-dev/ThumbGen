@@ -1,27 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "../../../lib/prisma";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "../../../lib/auth";
+import { auth } from "@clerk/nextjs/server";
 import { uploadBuffer } from "../../../lib/s3";
 import { v4 as uuid } from "uuid";
 import { streamToBuffer } from "../../../lib/utils/image";
 import AWS from "aws-sdk";
 
+
 export async function GET(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user)
-      return new NextResponse(JSON.stringify({ error: "unauth" }), { status: 401 });
+  const { isAuthenticated, userId } = await auth()
 
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email as string },
-    });
+    if (!isAuthenticated){
+      return new NextResponse(JSON.stringify({ error: "Not authenticated" }), { status: 401 });
+    }
 
-    if (user) {
+ 
       try {
         const result = await prisma.channel.findMany({
           where: {
-            userId: user.id,
+            userId: userId,
           },
           orderBy: {
             createdAt: "desc",
@@ -51,11 +49,6 @@ export async function GET(req: NextRequest) {
           status: 400,
         });
       }
-    } else {
-      return new NextResponse(JSON.stringify({ error: "User not found" }), {
-        status: 404,
-      });
-    }
   } catch (e) {
     return new NextResponse(JSON.stringify({ error: "unauth" }), { status: 401 });
   }
@@ -63,20 +56,11 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user)
-      return new NextResponse(JSON.stringify({ error: "unauth" }), { status: 401 });
-
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email as string },
-    });
-
-    if (!user) {
-      return new NextResponse(JSON.stringify({ error: "User not found" }), {
-        status: 404,
-      });
-    }
-
+    const { isAuthenticated, userId } = await auth()
+   
+    if (!isAuthenticated)
+      return new Response(JSON.stringify({ error: "unauth" }), { status: 401 });
+    
     const formData = await req.formData();
     const name = formData.get("name") as string;
     const category = formData.get("category") as string;
@@ -101,7 +85,7 @@ export async function POST(req: NextRequest) {
         category: category,
         brandGuidelines: brandGuidelines,
         logoUrl: s3 ? s3.Key : null,
-        userId: user.id,
+        userId: userId,
       },
       select: {
         id: true,

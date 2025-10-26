@@ -1,37 +1,33 @@
-//app/layout.tsx
-import './globals.css'
-import { Providers } from "./providers"
-import { getServerSession } from "next-auth/next"
-import { authOptions } from "../lib/auth"
-import { ReactNode } from "react"
-import { SocketProvider } from '../components/sockets/SocketProvider';
-import StoreProvider from './storeProvider'
-import ToastProvider from "../components/ToastProvider"
-import { ClientWrapper } from "../components/ClientWrapper"
- const metadata = { title: 'YouThumbnail' };
+// app/layout.tsx
 
- interface RootLayoutProps {
+import './globals.css';
+import { ClerkProvider } from '@clerk/nextjs';
+import { ReactNode } from "react";
+import { SocketProvider } from '../components/sockets/SocketProvider';
+import StoreProvider from './storeProvider';
+import ToastProvider from "../components/ToastProvider";
+import { ToggleProvider } from "../contexts/toggle";
+
+
+interface RootLayoutProps {
   children: ReactNode
 }
-export default  async function RootLayout({ children }: RootLayoutProps) {
- const session = await getServerSession(authOptions)
 
-
-
+export default function RootLayout({ children }: RootLayoutProps) {
   return (
-    <html>
+    <html lang="en">
       <body>
-        <ClientWrapper >
-        <ToastProvider />
-        </ClientWrapper>
-        <StoreProvider>
-       <SocketProvider debug={process.env.NODE_ENV === 'development'}>
-         <Providers session={session}>
-        <main>{children}</main>
-        </Providers>
-        </SocketProvider>
-        </StoreProvider>
+        <ClerkProvider>
+          <StoreProvider>
+            <SocketProvider debug={process.env.NODE_ENV === 'development'}>
+              <ToggleProvider>
+                <ToastProvider />
+                <main>{children}</main>
+              </ToggleProvider>
+            </SocketProvider>
+          </StoreProvider>
+        </ClerkProvider>
       </body>
     </html>
-  );
+  )
 }

@@ -1,7 +1,6 @@
 'use client';
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useSearchParams, useRouter } from 'next/navigation';
-import axios from 'axios';
 import Navbar from '../../../components/Navbar';
 import ThumbnailPreview from '../../../components/Edit/ThumbnailPreview';
 import ChatInterface from '../../../components/Edit/ChatInterface';
@@ -133,9 +132,7 @@ export default function EditPage() {
     if (thumbnails?.versions && index >= 0 && index < thumbnails.versions.length) {
       setCurrentVersionIndex(index);
       
-      // Optional: Update the backend about the selected version
-      // axios.patch(`/api/thumbnail/${thumbnailId}/version/${thumbnails.versions[index].id}/select`)
-      //   .catch(error => console.error('Error updating selected version:', error));
+      
     } 
   };
 

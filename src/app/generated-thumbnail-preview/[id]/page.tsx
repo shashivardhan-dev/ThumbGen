@@ -26,13 +26,9 @@ export default function GeneratedThumbnailPreviewPage() {
   const thumbnailVersionId = params?.id as string;
   const thumbnailId = searchParams?.get('thumbnailId') as string;
   
-  // const title = searchParams?.get('title') || 'Untitled Video';
-  // const style = searchParams?.get('style') || 'bold';
 
-  // WebSocket integration
   const {  isConnected, progress, status, isInRoom, requestStatus } = useThumbnailGenerateSocket(thumbnailVersionId || undefined);
- console.log(progress, "progress", status);
-  // Component state
+
   const [previewSrc, setPreviewSrc] = useState<string | null>(null);
   const [isGenerationComplete, setIsGenerationComplete] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -135,8 +131,6 @@ export default function GeneratedThumbnailPreviewPage() {
   if (!previewSrc) return;
 
   try {
-    console.log('Downloading...');
-    console.log('Preview Src:', previewSrc);
     const response = await fetch(previewSrc);
     console.log('Response:', response);
     const blob = await response.blob();
@@ -201,17 +195,6 @@ export default function GeneratedThumbnailPreviewPage() {
                {/* <span className="font-semibold">"{title}"</span> in {style} style */}
             </p>
             
-            {/* Connection Status (Development) */}
-            {process.env.NODE_ENV === 'development' && (
-              <div className={`mb-4 p-3 rounded-lg text-sm ${
-                isConnected 
-                  ? (isToggled ? 'bg-green-900/20 text-green-300 border border-green-700' : 'bg-green-100 text-green-800 border border-green-200')
-                  : (isToggled ? 'bg-red-900/20 text-red-300 border border-red-700' : 'bg-red-100 text-red-800 border border-red-200')
-              }`}>
-                Socket: {isConnected ? 'Connected' : 'Disconnected'} | Room: {isInRoom ? 'Joined' : 'Not joined'}
-              </div>
-            )}
-
             {/* Error Display */}
             {error && (
               <div className={`mb-6 p-4 rounded-lg ${

@@ -1,19 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "../../../lib/auth";
+import { auth } from "@clerk/nextjs/server";
 import { prisma } from "../../../lib/prisma";
 
 export async function GET(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+       const { isAuthenticated, userId } = await auth();
 
-    if (!session?.user) {
-      return new Response(JSON.stringify({ message: "Unauthorized" }), {
-        status: 401,
-      });
-    }
+    if (!isAuthenticated)
+      return new Response(JSON.stringify({ error: "unauth" }), { status: 401 });
 
-    const userId = (session.user as { id: string }).id;
+
 
     const thumbnails = await prisma.thumbnail.findMany({
       where: {
