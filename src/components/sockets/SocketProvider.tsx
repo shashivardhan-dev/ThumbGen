@@ -126,7 +126,7 @@ export function SocketProvider({
 
   useEffect(() => {
 
-    const socketInstance = io("http://localhost:3000",{
+    const socketInstance = io(process.env.FRONTEND_URL,{
       path: "/socket",
       transports: ['websocket'],
       timeout: 20000,

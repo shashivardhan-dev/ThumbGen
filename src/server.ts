@@ -62,13 +62,10 @@ async function setupSocketIO(httpServer: any) {
 
   // Create Socket.IO server
   io = new Server(httpServer, {
-    path: "/socket", // Changed from "/api/socket" to "/socket"
+    path: "/socket",
     transports: ["websocket"],
     cors: {
-      origin:
-        process.env.NODE_ENV === "production"
-          ? process.env.FRONTEND_URL
-          : ["http://localhost:3000", "http://localhost:3001"],
+      origin:process.env.FRONTEND_URL,
       methods: ["GET", "POST"],
       credentials: true,
     },
